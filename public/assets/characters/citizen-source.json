@@ -1,0 +1,72 @@
+{
+  "slug": "casual-walker",
+  "name": "Casual Walker",
+  "category": "people",
+  "tags": [
+    "person",
+    "pedestrian",
+    "character",
+    "rigged",
+    "animated",
+    "hoodie",
+    "jeans"
+  ],
+  "description": "Young man in a grey hoodie, jeans and white trainers. Rigged with a 56-bone humanoid skeleton and four looping animations (idle, walk, wave, look_around). Origin on the ground between the feet, facing +Z.",
+  "license": "CC0-1.0",
+  "version": 1,
+  "changes": "First release.",
+  "created": "2026-10-26",
+  "updated": "2026-10-26",
+  "units": "meters",
+  "up": "+Y",
+  "forward": "+Z",
+  "dimensions": {
+    "x": 1.367,
+    "y": 1.788,
+    "z": 0.38
+  },
+  "parts": [],
+  "animations": [
+    {
+      "name": "idle",
+      "duration": 5.033
+    },
+    {
+      "name": "look_around",
+      "duration": 5.033
+    },
+    {
+      "name": "walk",
+      "duration": 1.033
+    },
+    {
+      "name": "wave",
+      "duration": 3.633
+    }
+  ],
+  "wind": false,
+  "preview": "/models/casual-walker/v1/preview.webp",
+  "files": [
+    {
+      "lod": 0,
+      "path": "/models/casual-walker/v1/lod0.glb",
+      "bytes": 1789516,
+      "sha256": "60f7fec2c35fc46b848d99da4c67f43213eea6d8464aa05ac683ffacf2a576d7",
+      "triangles": 27997
+    },
+    {
+      "lod": 1,
+      "path": "/models/casual-walker/v1/lod1.glb",
+      "bytes": 671280,
+      "sha256": "ed578eebe688843f684391719158a08bf454665fd63f16df6b4745a57cffda9f",
+      "triangles": 8999
+    },
+    {
+      "lod": 2,
+      "path": "/models/casual-walker/v1/lod2.glb",
+      "bytes": 250212,
+      "sha256": "9ae23cac191eb57ca75750b9af94afb0c909ab257b6868843a4de6cf16004734",
+      "triangles": 1799
+    }
+  ]
+}

@@ -1,0 +1,258 @@
+{
+  "license": "CC0-1.0",
+  "provider": "tevy",
+  "sources": [
+    {
+      "id": "corner-shop-block",
+      "version": 2,
+      "dimensions": {
+        "x": 20.02,
+        "y": 14.75,
+        "z": 20.4
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/corner-shop-block/v2/lod1.glb",
+      "file": "corner-shop-block-1.glb",
+      "bytes": 271744,
+      "sha256": "3f6bc025d7d50b006740a28d998897ca06a1ac0d912d4ae84af0c388ceaf9c8a"
+    },
+    {
+      "id": "corner-shop-block",
+      "version": 2,
+      "dimensions": {
+        "x": 20.02,
+        "y": 14.75,
+        "z": 20.4
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/corner-shop-block/v2/lod2.glb",
+      "file": "corner-shop-block-2.glb",
+      "bytes": 593692,
+      "sha256": "a4b6c307446cdf6006555e3f49dba9e9b4d8be1bfc7b97b88ad2092cef57498d"
+    },
+    {
+      "id": "fire-station",
+      "version": 1,
+      "dimensions": {
+        "x": 30.835,
+        "y": 18.4,
+        "z": 32
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/fire-station/v1/lod1.glb",
+      "file": "fire-station-1.glb",
+      "bytes": 738768,
+      "sha256": "f623c67a9c6fbaccd263c2e3664218587bae0373cd458d43aa3ca3f7a234e609"
+    },
+    {
+      "id": "fire-station",
+      "version": 1,
+      "dimensions": {
+        "x": 30.835,
+        "y": 18.4,
+        "z": 32
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/fire-station/v1/lod2.glb",
+      "file": "fire-station-2.glb",
+      "bytes": 220468,
+      "sha256": "da49a6fa15827561e3b685192b96c7c9eeca2e35420bf0789f0774b12fdddd23"
+    },
+    {
+      "id": "hospital-building",
+      "version": 2,
+      "dimensions": {
+        "x": 54,
+        "y": 32.34,
+        "z": 38.5
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/hospital-building/v2/lod1.glb",
+      "file": "hospital-building-1.glb",
+      "bytes": 928300,
+      "sha256": "c9c01f578a9a769f6270b8e840d4e280726ff45ab569642cbb49655717e9dd66"
+    },
+    {
+      "id": "hospital-building",
+      "version": 2,
+      "dimensions": {
+        "x": 54,
+        "y": 32.34,
+        "z": 38.5
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/hospital-building/v2/lod2.glb",
+      "file": "hospital-building-2.glb",
+      "bytes": 647268,
+      "sha256": "9c18b4bec0d45da0c52c325c25ccdf496532887e2540211452b6284550c6abeb"
+    },
+    {
+      "id": "police-station",
+      "version": 1,
+      "dimensions": {
+        "x": 31.175,
+        "y": 19.36,
+        "z": 29.5
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/police-station/v1/lod1.glb",
+      "file": "police-station-1.glb",
+      "bytes": 767224,
+      "sha256": "c1f9a0ec73c9198363b43d75749cab548cc1dbf8fe23d46b1f5ea88a93cf75bb"
+    },
+    {
+      "id": "police-station",
+      "version": 1,
+      "dimensions": {
+        "x": 31.175,
+        "y": 19.36,
+        "z": 29.5
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/police-station/v1/lod2.glb",
+      "file": "police-station-2.glb",
+      "bytes": 237176,
+      "sha256": "456d9f77e8a9ab06034f5d4f668bdc5873f390a812030bf91ee6b07fb8edb42e"
+    },
+    {
+      "id": "school-building",
+      "version": 1,
+      "dimensions": {
+        "x": 42.6,
+        "y": 10.125,
+        "z": 24.34
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/school-building/v1/lod1.glb",
+      "file": "school-building-1.glb",
+      "bytes": 881808,
+      "sha256": "1f0509e7faa7f33a301d391eb19a780960eac698b5dcbcbeb375257b5a8da73f"
+    },
+    {
+      "id": "school-building",
+      "version": 1,
+      "dimensions": {
+        "x": 42.6,
+        "y": 10.125,
+        "z": 24.34
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/school-building/v1/lod2.glb",
+      "file": "school-building-2.glb",
+      "bytes": 228148,
+      "sha256": "c27ea20d3b96abb2b55fcde641b3320e8d0925c4dbc3b7ec2c03587d3f8d67a2"
+    },
+    {
+      "id": "skyscraper-kit",
+      "version": 2,
+      "dimensions": {
+        "x": 25.2,
+        "y": 40.45,
+        "z": 29.1
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/skyscraper-kit/v2/lod1.glb",
+      "file": "skyscraper-kit-1.glb",
+      "bytes": 281840,
+      "sha256": "a2adce91f88f3fa266d8effb5e589a5dc017890bd336bfcbd290f983ba95384a"
+    },
+    {
+      "id": "skyscraper-kit",
+      "version": 2,
+      "dimensions": {
+        "x": 25.2,
+        "y": 40.45,
+        "z": 29.1
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/skyscraper-kit/v2/lod2.glb",
+      "file": "skyscraper-kit-2.glb",
+      "bytes": 444204,
+      "sha256": "4be9d3839030e08bd63209772dabdc2c7bb46b6c13faa85bf4aea019c3060d5c"
+    },
+    {
+      "id": "town-hall",
+      "version": 1,
+      "dimensions": {
+        "x": 36,
+        "y": 31.221,
+        "z": 34
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/town-hall/v1/lod1.glb",
+      "file": "town-hall-1.glb",
+      "bytes": 755364,
+      "sha256": "e028003f759fb9ad18c92c8c91f394a4ecb17c2ad6fbf45f88c04dfe4c6e9d0b"
+    },
+    {
+      "id": "town-hall",
+      "version": 1,
+      "dimensions": {
+        "x": 36,
+        "y": 31.221,
+        "z": 34
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/town-hall/v1/lod2.glb",
+      "file": "town-hall-2.glb",
+      "bytes": 193028,
+      "sha256": "5de7fcbbde63ff488c11ed7bc6020094d118d9b4ab91516fff570a30ddb51a3c"
+    },
+    {
+      "id": "village-house",
+      "version": 2,
+      "dimensions": {
+        "x": 10.76,
+        "y": 11.65,
+        "z": 11.61
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/village-house/v2/lod1.glb",
+      "file": "village-house-1.glb",
+      "bytes": 340148,
+      "sha256": "e44572a70cf4ab442aaa6add9addee636e62ff51df963a777db3598ee028a723"
+    },
+    {
+      "id": "village-house",
+      "version": 2,
+      "dimensions": {
+        "x": 10.76,
+        "y": 11.65,
+        "z": 11.61
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/village-house/v2/lod2.glb",
+      "file": "village-house-2.glb",
+      "bytes": 99172,
+      "sha256": "2ed400d0b6636733dc33887c7ad497cf69fe4f552fe70c6db2578e61af3ef17c"
+    },
+    {
+      "id": "warehouse",
+      "version": 2,
+      "dimensions": {
+        "x": 42.2,
+        "y": 10.628,
+        "z": 29.65
+      },
+      "lod": 1,
+      "url": "https://tevy.dev/models/warehouse/v2/lod1.glb",
+      "file": "warehouse-1.glb",
+      "bytes": 994280,
+      "sha256": "989912e784a1fc1a822df7ddc4e3b65be53149744cc40a6d66a7e548d9760fc4"
+    },
+    {
+      "id": "warehouse",
+      "version": 2,
+      "dimensions": {
+        "x": 42.2,
+        "y": 10.628,
+        "z": 29.65
+      },
+      "lod": 2,
+      "url": "https://tevy.dev/models/warehouse/v2/lod2.glb",
+      "file": "warehouse-2.glb",
+      "bytes": 291068,
+      "sha256": "cac2c2bc9802f423126dbfd7fc2d4bc14eae152a6264f8db54de0774d6956e58"
+    }
+  ]
+}
