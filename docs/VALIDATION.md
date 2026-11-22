@@ -1,8 +1,42 @@
-# Playable development checkpoint — 2026-11-21
+# Current playable checkpoint — 2026-11-21
+
+Platform: macOS Apple Silicon, Chromium 151, native ANGLE Metal, 1440 × 900 browser tests, one browser worker. Other host workloads were present. These observations cover one workstation.
+
+- `pnpm typecheck`, `pnpm build`: **pass**. Production output: `dist/`.
+- `pnpm test`: **80 tests / 27 files pass**, including real Rapier collision, chunk lifetimes, persistence, transactions, camera transforms, real-rig palm IK, first-person sleeve/hand geometry cleanup, coastal phone lookup, final police parking, entry through the real door, complete stair climbing and reversing downstairs.
+- Full browser suite: **38 / 38 pass**, zero skips, failures or flaky retries, **641.4 seconds**, fixed QA bundle `index-CEwGQAWK.js`. Report: `artifacts/e2e-final.json`.
+- Production smoke: actual start → E → collision-controlled convenience-store entry; no page/console errors; QA API absent even with `?e2e=1`. Script: `scripts/smoke-production.mjs`; screenshot: `artifacts/production-convenience-entry.png`.
+- All **68 pinned external assets** pass SHA-256 verification with `python3 scripts/assets.py`. Phone videos are original local scene/audio recordings and load when PULSE opens.
+- Fresh browser / local static server: menu **1,332 ms**, playable **1,910 ms**, **23,860,490 response-body bytes / 54 completed requests**. One detail request remained pending while play was possible. This is not a remote-network guarantee. Report: `artifacts/startup.json`.
+
+The browser paths cover shopping/payment/consumption/save/reload, real refrigerator and carried product, garage and refueling, bank and 14 paid facility services, apartment access, NPC conversation, weapons, robbery, physical police entry/arrest, first-person driving/phone, coastal swimming and origin rebasing, GPS and both player-driven and NPC-driven taxi services. Fault injection checks worker restart, district download recovery and cancelling a pending car purchase without payment.
+
+## Reported visual and interaction fixes
+
+- Camera clipping computes the fraction before changing its endpoint, preventing invalid positions near walls and ceilings.
+- The first-person eye is attached to the current rigid-body seat transform, without the third-person positional spring. A real-input run above 20 m/s with left/right steering measured a maximum seat error of approximately **1.03e-7 m** and palm/rim error of **0.000243 m**.
+- First-person sleeves/hands are filtered from the real skinned model by joint weights; the head, hood and torso are excluded. Palm orientation and finger curl follow the rotating wheel. An owned phone has a physical dashboard/hand-held screen; the same video plays in the phone UI and 3D display.
+- Pedestrian rendering interpolates separately from fixed physics, with buffered movement-animation transitions. Continuous motion is checked while the player walks.
+- E opens the physical shop door and aligns the character through the opening with the collision controller. F transfers occupied/parked NPC cars, removes the overlapping traffic body, ejects the driver, raises wanted level and permits actual driving and exit.
+- The private lounge has human-scale chairs (1.05 m wide, 0.46 m seat height), meeting table, desk, shelves, bar, stools, plants and a divider. Its adult attendant uses opaque two-piece costume geometry on the licensed rig, stable elbow poles and palm contact targets.
+- Police use explicit door and stair links alongside the local obstacle grid. They park at the final approach, stand on physical ground, enter, climb, descend and arrest with a clear sight line. Arrest/damage cannot pass through a wall or floor. Ground-floor and upstairs cases each passed two focused repeats before the final full suite.
+
+Screenshots: `artifacts/driving-hands-fixed.png`, `driving-phone-fixed.png`, `lounge-furnished-fixed.png`, `lounge-bikini-fixed.png`, `npc-taxi-passenger.png`, `broken-atm.png`.
+
+## Streaming and performance evidence
+
+- Current full-suite real-input autodrive: **871.3 m**, vehicle health **100**, zero generation failures. Bridge ramp/deck/water continuity passed.
+- Seven region visits/returns: **25 resident chunks**, 175 loads / 150 unloads, zero generation failures. Original-location references returned to **732**, colliders to **1,113**; resource estimates **143.1–152.0 MB**, including retained warmed caches. This is not total browser/driver RAM.
+- High-quality visual case sampled approximately **49.6 FPS**. This is a short native-GPU sample, not sustained cross-device qualification.
+- Ten-minute reverse-driving stress: **6,051.8 m**, **565 loads / 259 unloads**, health **100**, zero generation failures, minimum vehicle height **0.699 m**, peak estimated resources **162.4 MB** during prefetch. The memory setting is a soft scheduling budget, not a measured total-RAM limit. This run preceded the final cockpit/wardrobe/police refinements; current streaming/visual regressions are recorded above. Report: `artifacts/streaming-soak-current.json`.
+
+This remains a playable prototype with low-poly assets. GTA6-level art, full production animation, complete road/environment variety, vehicle suspension and every long-term content item are unfinished. Windows/Linux hardware, Safari and an eight-hour soak have not been qualified. README lists the remaining scope.
+
+## Previous checkpoint, before the reported interaction fixes
 
 Platform: macOS Apple Silicon, Chromium 151, native ANGLE Metal. Browser E2E viewport 1440 × 900, device scale 1, one test worker. Streaming cases use low quality; explicit visual cases also exercise high quality. These measurements cover one workstation.
 
-Current checks:
+Checks at that earlier checkpoint:
 
 - TypeScript typecheck and production build pass.
 - 67 unit / integration tests across 23 files pass, including real Rapier movement, a multi-kilometer road continuity regression, chunk physical-handle preservation, retry after optional asset failure, version migration, database-open/shutdown races, transactions and single-payment game rewards.
@@ -43,7 +77,7 @@ Memory figures are estimates of owned geometry and texture data. They exclude so
 
 ## Earlier Phase 1 checkpoint
 
-# Phase 1 verification checkpoint
+### Phase 1 verification checkpoint
 
 Date: 2026-11-20, macOS Apple Silicon, Chromium 151, native Metal renderer.
 

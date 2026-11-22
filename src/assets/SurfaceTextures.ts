@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-export type Surface = 'asphalt' | 'brick' | 'stucco' | 'paving' | 'soil';
+export type Surface = 'asphalt' | 'brick' | 'stucco' | 'paving' | 'soil' | 'wood' | 'fabric';
 interface SurfaceEntry { texture: THREE.Texture; refs: number; borrowed?: boolean; }
 export const SURFACE_MATERIALS: Record<string, { surface: Surface; color: string; meters: number }> = {
   'surface/asphalt': { surface: 'asphalt', color: '#c5c7ca', meters: 2.1 },
@@ -10,6 +10,8 @@ export const SURFACE_MATERIALS: Record<string, { surface: Surface; color: string
   'surface/concrete-dark': { surface: 'stucco', color: '#839498', meters: 2 },
   'surface/pavers': { surface: 'paving', color: '#dfd9c9', meters: 2 },
   'surface/soil': { surface: 'soil', color: '#819174', meters: 2 },
+  'surface/wood': { surface: 'wood', color: '#ffffff', meters: 2 },
+  'surface/carpet': { surface: 'fabric', color: '#55434a', meters: .3 },
 };
 /** Tiny original procedural PBR surfaces, shared across every instance and chunk. */
 export class SurfaceTextures {
@@ -18,7 +20,7 @@ export class SurfaceTextures {
   private closed = false;
   async preload() {
     const loader = new THREE.TextureLoader();
-    await Promise.all(([['asphalt', 'clean_asphalt'], ['brick', 'brick_wall_001'], ['paving', 'square_concrete_pavers']] as const).map(async ([surface, source]) => {
+    await Promise.all(([['asphalt', 'clean_asphalt'], ['brick', 'brick_wall_001'], ['paving', 'square_concrete_pavers'], ['wood', 'wood_floor_worn']] as const).map(async ([surface, source]) => {
       const [color, normal, roughness] = await Promise.all(['diffuse', 'nor_gl', 'rough'].map(kind => loader.loadAsync(`/assets/surfaces/${source}-${kind}.jpg`)));
       color.colorSpace = THREE.SRGBColorSpace;
       for (const texture of [color, normal, roughness]) { texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 8; }
@@ -46,6 +48,7 @@ export class SurfaceTextures {
           if (crack < .8) value = 110;
         } else if (surface === 'paving' && (x % 32 === 0 || y % 32 === 0)) value = 145;
         else if (surface === 'soil') value = 190 + noise * 65;
+        else if (surface === 'fabric') value = 180 + noise * 50 + ((x + y) % 3 ? 0 : 24);
         const index = (y * size + x) * 4; data[index] = data[index + 1] = data[index + 2] = value; data[index + 3] = 255;
       }
       const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);

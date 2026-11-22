@@ -1,5 +1,6 @@
+import { LiveMusic } from './LiveMusic';
 interface Position { x: number; y: number; z: number; }
-interface Ambience { inside: boolean; rain: boolean; walking: number; swimming: boolean; bar: boolean; wanted: number; listener?: Position; police?: Position; yaw?: number; }
+interface Ambience { inside: boolean; rain: boolean; walking: number; swimming: boolean; bar: boolean; wanted: number; listener?: Position; police?: Position; stage?: Position; yaw?: number; }
 
 /** Original, locally synthesized layers; no remote audio service or unlicensed samples. */
 export class CityAudio {
@@ -14,7 +15,7 @@ export class CityAudio {
   private streetFilter?: BiquadFilterNode;
   private lastStep = 0;
   private lastBird = 0;
-  private lastBeat = 0;
+  private music?: LiveMusic;
   private siren?: OscillatorNode;
   private sirenGain?: GainNode;
   private sirenPanner?: PannerNode;
@@ -23,6 +24,7 @@ export class CityAudio {
   start() {
     if (this.context) { void this.context.resume(); return; }
     const context = this.context = new AudioContext(); this.master = context.createGain(); this.master.gain.value = this.volume; this.master.connect(context.destination);
+    this.music = new LiveMusic(context, this.master);
     this.noise = context.createBuffer(1, context.sampleRate * 3, context.sampleRate);
     const data = this.noise.getChannelData(0); let previous = 0;
     for (let i = 0; i < data.length; i++) { previous = previous * .87 + (Math.random() * 2 - 1) * .13; data[i] = previous * 2; }
@@ -66,7 +68,7 @@ export class CityAudio {
       this.lastStep = now; this.rustle(ambience.swimming ? 420 : 800, .035, ambience.swimming ? .15 : .07);
     }
     if (!ambience.inside && !ambience.rain && now - this.lastBird > 12) { this.lastBird = now; this.tone(2400, 3400, .15, .012, 'sine'); }
-    if (ambience.bar && now - this.lastBeat > .5) { this.lastBeat = now; this.tone(90, 48, .15, .035, 'sine'); }
+    this.music?.update(ambience.bar && !paused, ambience.stage);
   }
   private tone(from: number, to: number, seconds: number, level: number, type: OscillatorType) {
     if (!this.context || !this.master) return;
@@ -85,6 +87,11 @@ export class CityAudio {
     source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
   }
   chime() { this.tone(660, 880, .25, .035, 'sine'); }
+  capture() {
+    if (!this.context || !this.master) return undefined;
+    const destination = this.context.createMediaStreamDestination(); this.master.connect(destination);
+    return { stream: destination.stream, close: () => { this.master?.disconnect(destination); destination.stream.getTracks().forEach(track => track.stop()); } };
+  }
   horn() { this.tone(280, 280, .25, .055, 'square'); this.tone(350, 350, .25, .025, 'triangle'); }
   impact() { this.rustle(650, .08, .2); }
   shot() { this.rustle(2200, .06, .1); }
@@ -92,5 +99,5 @@ export class CityAudio {
     const timer = window.setTimeout(() => { this.pendingThunder.delete(timer); this.rustle(220, .08, 1.8); }, distance / 343 * 1000);
     this.pendingThunder.add(timer);
   }
-  close() { for (const timer of this.pendingThunder) clearTimeout(timer); this.pendingThunder.clear(); this.engine?.stop(); this.siren?.stop(); void this.context?.close(); }
+  close() { this.music?.close(); for (const timer of this.pendingThunder) clearTimeout(timer); this.pendingThunder.clear(); this.engine?.stop(); this.siren?.stop(); void this.context?.close(); }
 }

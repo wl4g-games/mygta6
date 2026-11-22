@@ -2,13 +2,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Physics, RAPIER } from '../src/physics/Physics';
 import { Vehicle } from '../src/vehicle/Vehicle';
 import { AssetManager } from '../src/assets/AssetManager';
-import { Scene } from 'three';
+import { Scene, Vector3 } from 'three';
+import { canReachVehicle } from '../src/vehicle/VehicleAccess';
 import type { StreamingManager } from '../src/world/StreamingManager';
 import { Player } from '../src/character/Player';
 describe('Rapier physics lifetime and solid obstacles', () => {
   let physics: Physics;
   beforeEach(async () => { physics = new Physics(); await physics.init(); });
   afterEach(() => physics.close());
+  it('allows entry to a nearby physical vehicle and rejects an intervening wall', () => {
+    const car = physics.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, .8, 0));
+    physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1, .7, 2), car);
+    const wall = physics.box(0, 1.2, -3, 4, 2.4, .2), player = new Vector3(0, 1, -5); physics.step();
+    expect(canReachVehicle(physics, player, car)).toBe(false);
+    physics.remove(wall); physics.step(); expect(canReachVehicle(physics, player, car)).toBe(true);
+    car.setEnabled(false); physics.step(); expect(canReachVehicle(physics, player, car)).toBe(false);
+  });
   it('rests a vehicle-sized body on the floor and releases all its shapes', () => {
     const floor = physics.box(0, -.5, 0, 128, 1, 128);
     const body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 3, 0));

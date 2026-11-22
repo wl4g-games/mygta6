@@ -10,6 +10,7 @@ import type { RAPIER, Physics } from '../physics/Physics';
 import { Dispatch } from '../police/Dispatch';
 import { Arsenal, type EquipmentState } from '../combat/Arsenal';
 import { CombatEffects } from '../combat/CombatEffects';
+import type { Destructibles } from '../combat/Destructibles';
 
 export interface SandboxState { wanted: number; searchTime: number; equipment: EquipmentState; }
 
@@ -24,10 +25,11 @@ export class Sandbox {
   private unsubscribe: () => void;
   onArrest: () => void = () => {};
   constructor(private readonly events: EventBus, assets: AssetManager, scene: THREE.Scene,
-    private readonly economy: Economy, private readonly state: WorldStateStore, private readonly life: CityLife, private readonly physics: Physics) {
+    private readonly economy: Economy, private readonly state: WorldStateStore, private readonly life: CityLife, private readonly physics: Physics, private readonly destructibles?: Destructibles) {
     this.dispatch = new Dispatch(assets, physics, scene, events);
     this.effects = new CombatEffects(scene, assets, physics, position => {
       this.life.blast(position, 7, 120); this.events.emit('explosion', { x: position.x, y: position.y, z: position.z, radius: 7, damage: 120 });
+      this.destructibles?.blast(position, 7, 120);
       this.events.emit('crime', { severity: 2, x: position.x, z: position.z });
     });
     this.unsubscribe = events.on('crime', crime => {
@@ -41,8 +43,8 @@ export class Sandbox {
     if (!this.wanted || !this.dispatch.active) return;
     const response = this.dispatch.update(dt, player, speed, inside, streaming), distance = response.car;
     if (distance > 100 && response.officer > 60 || inside && response.officer > 18) this.searchTime += dt; else this.searchTime = Math.max(0, this.searchTime - dt);
-    if (response.officer < 2.5 && speed < 2) this.arrest += dt; else this.arrest = 0;
-    if (this.wanted >= 3 && response.officer < 18) this.economy.state.health = Math.max(0, this.economy.state.health - dt * 3);
+    if (response.officer < 2.5 && response.canArrest && speed < 2) this.arrest += dt; else this.arrest = 0;
+    if (this.wanted >= 3 && response.officer < 18 && response.canArrest) this.economy.state.health = Math.max(0, this.economy.state.health - dt * 3);
     if (this.arrest > 4) {
       this.economy.state.cash = Math.max(0, this.economy.state.cash - 60); this.economy.state.health = 100;
       this.clearWanted(); this.events.emit('toast', '已被捕 · 罚款 $60，已返回社区服务站'); this.onArrest();
@@ -71,6 +73,8 @@ export class Sandbox {
       this.events.emit('crime', { severity: 1, x: position.x, z: position.z }); return true;
     }
     const distance = this.physics.blocked(origin, origin.clone().addScaledVector(direction, range), exclude) ?? range;
+    const environment = this.destructibles?.hit(origin, direction, range, weapon?.damage ?? 25, exclude);
+    if (environment) { if (weapon) this.effects.trace(origin, environment); return true; }
     const hit = this.life.hit(position, direction, Math.min(range, distance + .7), weapon?.damage ?? 25);
     if (this.equipped) {
       this.effects.trace(origin, hit ?? origin.clone().addScaledVector(direction, distance));
@@ -93,5 +97,6 @@ export class Sandbox {
   }
   get policeOnFoot() { return this.dispatch.onFoot; }
   get policePosition() { return this.dispatch.position; }
+  get officerPosition() { return this.dispatch.officerPosition; }
   close() { this.unsubscribe(); this.clearWanted(); this.effects.close(); }
 }

@@ -3,7 +3,7 @@ import { start, snapshot, visitService, driveToX } from './helpers';
 
 test('pick up a real passenger, save mid-trip, drive to the destination and earn a repeatable fare', async ({ page }) => {
   await start(page); await visitService(page, 0, 4); await page.locator('#service').click();
-  await page.keyboard.press('KeyP'); await page.locator('#taxi-job').click();
+  await page.keyboard.press('KeyP'); await page.locator('[data-app="rides"]').click(); await page.locator('#taxi-job').click();
   await expect.poll(async () => (await snapshot(page)).taxi.stage).toBe('pickup');
   await page.evaluate(() => window.__city.vehicleTeleport(40, 508, -Math.PI / 2));
   await expect.poll(async () => (await snapshot(page)).groundReady).toBe(true);

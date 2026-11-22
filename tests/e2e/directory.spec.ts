@@ -5,7 +5,7 @@ test('bought phone and guide expose real facilities and persist selected GPS des
   await start(page); await page.keyboard.press('KeyP'); await expect(page.locator('#toast')).toContainText('购买手机');
   await visitService(page, 0, 4); await page.locator('#service').click();
   expect((await snapshot(page)).flags['owns:phone']).toBe(true); expect((await snapshot(page)).cash).toBe(160);
-  await page.keyboard.press('KeyP'); await expect(page.locator('#places')).toBeVisible();
+  await page.keyboard.press('KeyP'); await page.locator('[data-app="maps"]').click(); await expect(page.locator('#places')).toBeVisible();
   await expect(page.locator('[data-destination]')).toHaveCount(20);
   await page.locator('[data-destination="bank"]').click(); await expect(page.locator('#modal')).toBeHidden();
   const waypoint = (await snapshot(page)).waypoint; expect(waypoint).not.toEqual({ x: 32, z: -14 });

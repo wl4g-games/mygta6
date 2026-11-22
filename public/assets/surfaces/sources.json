@@ -52,5 +52,23 @@
     "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/square_concrete_pavers/square_concrete_pavers_rough_1k.jpg",
     "sha256": "a993c1db60d4f3a3d9343537d4aa614182bce4dd045c4798744509c7a6f105a5",
     "bytes": 639971
+  },
+  {
+    "file": "public/assets/surfaces/wood_floor_worn-diffuse.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_floor_worn/wood_floor_worn_diff_1k.jpg",
+    "sha256": "db386853009b92b9edd7255b35c9f7b0d4b7de16837a7a9da8422148754bc758",
+    "bytes": 629271
+  },
+  {
+    "file": "public/assets/surfaces/wood_floor_worn-nor_gl.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_floor_worn/wood_floor_worn_nor_gl_1k.jpg",
+    "sha256": "f428496e5d6c726d17d9ecea29c0acd8660348630acf791cea7bdd7f3c6e262b",
+    "bytes": 636603
+  },
+  {
+    "file": "public/assets/surfaces/wood_floor_worn-rough.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_floor_worn/wood_floor_worn_rough_1k.jpg",
+    "sha256": "9d7492db1197f1386466dfd7dd43f692446166c1433ddeebf66c10e8b226a6d0",
+    "bytes": 290570
   }
 ]

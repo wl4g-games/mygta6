@@ -9,6 +9,7 @@ import { buildCity } from '../city/CityBuilder';
 import { GenerationWorker } from './GenerationWorker';
 import type { ChunkPlan } from './ProceduralGenerator';
 import { storeForChunk } from '../store/StoreArchetype';
+import { storeEnvelope } from '../interior/StoreEnvelope';
 import { infrastructureColliders } from '../city/Infrastructure';
 import { sidewalkSurfaces } from '../city/RoadGeometry';
 import { forecourtParts } from '../city/Forecourt';
@@ -71,13 +72,15 @@ export class WorldChunk implements IWorldChunk {
       this.colliders.push(this.physics.box(p.x, p.height / 2, p.z, p.width, p.height, p.depth));
     }
     const store = storeForChunk(plan.id), { x, z } = store;
-    this.colliders.push(this.physics.box(x, 4.6, z, 29, .45, 27));
+    const envelope = storeEnvelope(store.archetype.kind), height = envelope.wallHeight;
+    this.colliders.push(this.physics.box(x, envelope.roof, z, 29, .45, 27));
     for (const part of forecourtParts(store)) if (part.solid) this.colliders.push(this.physics.box(part.x, part.y, part.z, part.w, part.h, part.d));
-    for (const args of [[x - 14, 2, z, .4, 4, 26], [x + 14, 2, z, .4, 4, 26], [x, 2, z - 13, 28, 4, .4],
+    for (const args of [[x - 14, height / 2, z, .4, height, 26], [x + 14, height / 2, z, .4, height, 26], [x, height / 2, z - 13, 28, height, .4],
       [x - 8, 1.6, z + 13, 12, 3.2, .3], [x + 8, 1.6, z + 13, 12, 3.2, .3]] as const) {
       const [bx, by, bz, bw, bh, bd] = args;
       this.colliders.push(this.physics.box(bx, by, bz, bw, bh, bd));
     }
+    if (store.archetype.kind === 'bar') this.colliders.push(this.physics.box(x, 6.8, z + 13, 28, 4.2, .4));
   }
   activate() { if (this.state === 'NEAR') this.state = 'ACTIVE'; }
   deactivate() { if (this.state === 'ACTIVE') this.state = 'NEAR'; }

@@ -11,13 +11,17 @@ import { Refrigerator } from './Refrigerator';
 import { addRetailItem } from '../assets/ProductModels';
 import { createWeaponModel } from '../combat/WeaponModel';
 import { WEAPONS } from '../combat/WeaponCatalog';
+import { ATMMachine, type InteriorServices } from '../store/ATMMachine';
+import { Nightclub } from './Nightclub';
 
 export interface StoreInterior {
   group: THREE.Group; details: THREE.Group; door: THREE.Group; fridge: Refrigerator; merchant: HumanModel;
   colliders: Collider[]; doorCollider?: Collider; doorOpen: boolean;
   guests: { name: string; model: HumanModel }[]; policeHold: number;
+  machines: ATMMachine[];
+  club?: Nightclub;
 }
-export function createInterior(location: StoreLocation, assets: AssetManager, physics: Physics): StoreInterior {
+export function createInterior(location: StoreLocation, assets: AssetManager, physics: Physics, services?: InteriorServices): StoreInterior {
   const group = new THREE.Group(), b = new GeometryBatch(assets), colliders: Collider[] = [];
   const details = new THREE.Group(); group.add(details);
   const { x, z, archetype: a } = location;
@@ -34,6 +38,15 @@ export function createInterior(location: StoreLocation, assets: AssetManager, ph
     b.add('!#f4dfb3', x + dx, 3.2, z, 1.1, .2, .8, 'cylinder');
   }
   const guests: StoreInterior['guests'] = [];
+  const machines: ATMMachine[] = [];
+  const club = a.kind === 'bar' ? new Nightclub(location, assets, physics, services) : undefined;
+  if (club) details.add(club.root);
+  if (a.kind === 'bank' && services) {
+    for (const [index, offset] of [[0, -8], [1, -2], [2, -7]]) {
+      const machine = new ATMMachine(`${location.id}:atm:${index}`, x + offset, z + (index === 2 ? 13.7 : 5), assets, physics, services);
+      machines.push(machine); (index === 2 ? group : details).add(machine.root);
+    }
+  }
   const retail = ['market', 'fuel', 'electronics', 'bookshop', 'clothing'].includes(a.kind);
   if (a.kind === 'weapons') {
     WEAPONS.forEach((weapon, index) => {
@@ -66,7 +79,7 @@ export function createInterior(location: StoreLocation, assets: AssetManager, ph
       b.add('#29454f', x + dx, 1.6, z + 4.55, .85, .55, .04);
     }
     furniture('#757a72', 0, .6, -11, 18, 1.1, 2);
-  } else if (!facilityFurniture(a.kind, furniture)) {
+  } else if (a.kind !== 'bar' && !facilityFurniture(a.kind, furniture)) {
     for (const dx of [-7, 0]) for (const dz of [-5, 3]) {
       furniture('#967859', dx, .76, dz, 1.3, .12, 1.3);
       for (const side of [-1, 1]) {
@@ -77,7 +90,7 @@ export function createInterior(location: StoreLocation, assets: AssetManager, ph
       b.add('#e7dbc1', x + dx, .91, z + dz, .12, .18, .12, 'cylinder');
     }
   }
-  if (['restaurant', 'bar', 'cafe'].includes(a.kind)) {
+  if (['restaurant', 'cafe'].includes(a.kind)) {
     for (const [index, seat] of [[-8.1, -5, -Math.PI / 2], [-5.9, -5, Math.PI / 2], [1.1, 3, Math.PI / 2]].entries()) {
       const model = new HumanModel(assets, ['#789b94', '#bb966d', '#788699'][index], '#c49172', false, index % 2 ? 'female' : 'male');
       model.group.position.set(x + seat[0], -.32, z + seat[1]); model.group.rotation.y = seat[2]; model.ride(0); details.add(model.group);
@@ -107,6 +120,6 @@ export function createInterior(location: StoreLocation, assets: AssetManager, ph
   const merchant = new HumanModel(assets, a.color, '#c49172'); merchant.group.position.set(x + 9, .15, z - 2); merchant.group.rotation.y = Math.PI; details.add(merchant.group);
   if (a.kind !== 'home') colliders.push(physics.box(x + 9, 1.05, z - 2, .65, 1.8, .65));
   const light = new THREE.PointLight('#ffe2b3', 30, 24, 2); light.position.set(x, 3, z); details.add(light);
-  return { group, details, door, fridge, merchant, colliders, guests, policeHold: 0, doorOpen: false,
+  return { group, details, door, fridge, merchant, colliders, guests, machines, club, policeHold: 0, doorOpen: false,
     doorCollider: physics.box(x, 1.5, z + 13, 3.6, 3, .15) };
 }

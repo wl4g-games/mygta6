@@ -7,11 +7,11 @@ export function vehicleView(definition: VehicleDefinition) {
   const metrics = vehicleMetrics(definition), motorcycle = definition.kind === 'motorcycle';
   return { eye: motorcycle ? .95 : .65 * metrics.scale.y, x: motorcycle ? 0 : -.4 * metrics.scale.x,
     z: (definition.kind === 'bus' ? -1.7 : ['truck', 'ambulance', 'fire'].includes(definition.kind) ? -1.2 : .65) * metrics.scale.z,
-    distance: motorcycle ? 6.5 : Math.max(10, definition.length + 4) };
+    distance: motorcycle ? 6.5 : Math.max(10, definition.length + 4), ...definition.cockpit };
 }
 export function createDriver(assets: AssetManager, definition: VehicleDefinition, shirt = '#ded7be', skin = '#b18364', haircut = false, visual = 'male') {
   const model = new HumanModel(assets, shirt, skin, haircut, visual), view = vehicleView(definition);
-  model.group.scale.setScalar(.9); model.group.position.set(view.x, view.eye - 1.647, view.z); model.ride(0); return model;
+  model.group.scale.setScalar(.95); model.group.position.set(view.x, view.eye - 1.647, view.z - .24); model.ride(0); return model;
 }
 
 export function vehicleMetrics(definition: VehicleDefinition) {
@@ -68,7 +68,7 @@ export function createCarModel(assets: AssetManager, color = '#547e7b', police =
   if (police || ['police', 'ambulance', 'fire'].includes(kind)) { b.add('!#699be4', -.3, 1.05, 0, .6, .18, .4); b.add('!#e17962', .3, 1.05, 0, .6, .18, .4); }
   b.build(group);
   const steering = assets.acquire('cylinder', '#263738');
-  const wheel = new THREE.Mesh(steering.geometry, steering.material); wheel.position.set(-.46, .47, -.57);
+  const wheel = new THREE.Mesh(steering.geometry, steering.material); wheel.name = 'steering_wheel'; wheel.position.set(-.46, .47, -.57);
   wheel.scale.set(.44, .05, .44); wheel.rotation.x = Math.PI / 2; wheel.userData.asset = { shape: 'cylinder', color: '#263738' }; group.add(wheel);
   for (const side of [-1, 1]) for (const z of [-1.38, 1.4]) {
     const wheel = new THREE.Group();

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { steeringFrame } from './SteeringFrame';
 
 interface Wheel { node: THREE.Object3D; pivot: THREE.Group; base: THREE.Quaternion; front: boolean; side: number; }
 interface Door { node: THREE.Object3D; base: THREE.Quaternion; }
@@ -7,8 +8,10 @@ interface Door { node: THREE.Object3D; base: THREE.Quaternion; }
 export class VehicleAnimation {
   private wheels: Wheel[] = [];
   private doors: Door[] = [];
+  private steeringWheels: { node: THREE.Object3D; base: THREE.Quaternion; axis: THREE.Vector3 }[] = [];
   private lights = new Set<THREE.MeshStandardMaterial>();
   private roll = 0;
+  private steeringAngle = 0;
   private doorAngle = 0;
   private readonly rotation = new THREE.Quaternion();
   constructor(root: THREE.Group) {
@@ -22,12 +25,15 @@ export class VehicleAnimation {
         node.add(pivot); this.wheels.push({ node, pivot, base: node.quaternion.clone(), front: /^wheel_F/.test(node.name), side: /FR|RR/.test(node.name) ? -1 : 1 });
       }
       if (/^door_FL$/.test(node.name)) this.doors.push({ node, base: node.quaternion.clone() });
+      if (node.name === 'steering_wheel') this.steeringWheels.push({ node, base: node.quaternion.clone(), axis: steeringFrame(node).axis });
       if (node instanceof THREE.Mesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
         if (material instanceof THREE.MeshStandardMaterial && /light_front|light_rear|lamp_red|backlight|bar_blue|bar_white/.test(material.name)) this.lights.add(material);
       }
     }
   }
   update(dt: number, speed: number, steering: number, brake: boolean, door: boolean, clock: number) {
+    this.steeringAngle = THREE.MathUtils.damp(this.steeringAngle, steering * .8, 12, dt);
+    for (const wheel of this.steeringWheels) wheel.node.quaternion.copy(wheel.base).multiply(this.rotation.setFromAxisAngle(wheel.axis, this.steeringAngle));
     this.roll = (this.roll + speed * dt / .34) % (Math.PI * 2);
     for (const wheel of this.wheels) {
       wheel.node.quaternion.copy(wheel.base);

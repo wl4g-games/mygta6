@@ -57,7 +57,8 @@ export class Dispatch {
     p.y = vehicleMetrics(vehicleDefinition('patrol')).rideHeight + (isBridge(p.x, p.z) ? bridgeElevation(p.x) : 0);
     const ready = streaming.ready(p.x, p.z); this.car.visible = ready; this.body.setEnabled(ready);
     this.body.setNextKinematicTranslation(p); this.body.setNextKinematicRotation({ x: 0, y: Math.sin(this.car.rotation.y / 2), z: 0, w: Math.cos(this.car.rotation.y / 2) });
-    if (!this.officer && ready && distance < 25 && speed < 3 && !isBridge(p.x, p.z)) {
+    const atDoorResponse = inside ? this.path.length === 0 && distance < 45 && delta.length() < 3 : distance < 25;
+    if (!this.officer && ready && atDoorResponse && speed < 3 && !isBridge(p.x, p.z)) {
       const spawn = p.clone().add(new THREE.Vector3(Math.cos(this.car.rotation.y) * 2.3, 0, -Math.sin(this.car.rotation.y) * 2.3));
       this.officer = new Officer(this.assets, this.physics, this.scene, spawn);
       this.events.emit('toast', '警员已下车 · 躲避搜寻或停下接受处理');
@@ -71,10 +72,11 @@ export class Dispatch {
     }
     if (this.driver) { this.driver.group.visible = !this.officer; this.driver.ride(dt); }
     animateVehicle(this.car, dt, this.officer ? 0 : distance > 80 ? 28 : 12, 0, !!this.officer, !!this.officer && this.clock % 4 < 1);
-    return { car: distance, officer: officerDistance };
+    return { car: distance, officer: officerDistance, canArrest: this.officer?.canArrest ?? false };
   }
   get active() { return !!this.car; }
   get position() { return this.car?.position; }
+  get officerPosition() { const p = this.officer?.body.translation(); return p ? new THREE.Vector3(p.x, p.y, p.z) : undefined; }
   get onFoot() { return !!this.officer; }
   clear() {
     this.revision++; this.officer?.close(); this.officer = undefined;

@@ -8,6 +8,8 @@ import { DEFAULT_BINDINGS, keyLabel, type UserSettings } from '../config/Prefere
 import type { PlaceEntry } from '../city/Places';
 import { hoursLabel, isStoreOpen } from '../store/StoreSchedule';
 import { ArcadeRound } from '../economy/ArcadeRound';
+import { PhoneScreen, type PhoneScreenPorts } from '../phone/PhoneScreen';
+import type { PhoneService } from '../phone/PhoneService';
 
 const icons = {
   pin: '<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
@@ -49,6 +51,7 @@ export class UI {
   private mode = '';
   private activeStore?: StoreLocation;
   private animation = 0;
+  phoneScreen?: PhoneScreen;
   private revisionCount = 0;
   private readonly root: HTMLElement;
   constructor() {
@@ -70,7 +73,7 @@ export class UI {
         <div id="interaction" class="interaction hidden"><kbd id="interaction-key">E</kbd><span id="interaction-label"></span></div>
         <div id="vehicle-hud" class="vehicle-hud hidden"><span id="vehicle-name">MONARCH · COASTLINE</span><div><b id="speed">0</b><small>KM/H</small></div><p>FUEL <i><em id="fuel-bar"></em></i><span id="fuel">100%</span></p><p>CONDITION <span id="vehicle-condition">100%</span></p></div>
         <div id="equipment-hud" class="hidden"></div>
-        <nav class="bottom-controls"><span><kbd>W A S D</kbd> 移动</span><span><kbd>SHIFT</kbd> 奔跑</span><span><kbd>F</kbd> 上 / 下车</span><span><kbd>I</kbd> 背包</span><span><kbd>V</kbd> 视角</span><span><kbd>ESC</kbd> 暂停</span><button id="help-button" aria-label="Controls">?</button></nav>
+        <nav class="bottom-controls"><span><kbd>W A S D</kbd> 移动</span><span><kbd>E</kbd> 进入 / 交互</span><span><kbd>鼠标 / 方向键</kbd> 镜头</span><span><kbd>SHIFT</kbd> 奔跑</span><span><kbd>F</kbd> 上 / 下车</span><span><kbd>I</kbd> 背包</span><span><kbd>V</kbd> 视角</span><span><kbd>ESC</kbd> 暂停</span><button id="help-button" aria-label="Controls">?</button></nav>
         <div id="performance" class="hidden"></div>
       </main>
       <div id="modal" class="modal hidden" role="dialog" aria-modal="true"></div>
@@ -116,6 +119,7 @@ export class UI {
   }
   toast(message: string) { clearTimeout(this.toastTimer); this.toastElement.textContent = message; this.toastElement.classList.remove('hidden'); this.toastTimer = window.setTimeout(() => this.toastElement.classList.add('hidden'), 3800); }
   private shell(kicker: string, title: string, body: string) {
+    this.phoneScreen?.close(); this.phoneScreen = undefined; this.modal.classList.remove('phone-modal');
     this.cancelCapture?.(); this.cancelCapture = undefined;
     this.revisionCount++;
     cancelAnimationFrame(this.animation);
@@ -185,11 +189,15 @@ export class UI {
   }
   help() {
     this.mode = 'help';
-    this.shell('FIND YOUR OWN WAY', '操作指南', `<div class="controls-grid">${[['W A S D','步行 / 驾驶'],['鼠标右键拖动','环绕视角'],['L','锁定鼠标视角'],['SHIFT','冲刺'],['SPACE','跳跃 / 手刹'],['CTRL / C','蹲下'],['E','门 / 商品 / NPC'],['F','上车 / 下车'],['V','第一 / 第三人称'],['I / TAB','背包'],['M','城市地图 / 导航'],['R','游戏化抢劫'],['Q / 鼠标左键','徒手 / 装备攻击'],['1 / 2 / 3 / 4 / 5','切换装备'],['T','换弹'],['P / G','手机 / 指南'],['H','喇叭'],['F5 / F3','存档 / 性能面板']].map(([key, label]) => `<div><kbd>${key.split(' ').map(part => /^[A-Z]$/.test(part) ? keyLabel(this.preferences.bindings[`Key${part}`] ?? part) : part).join(' ')}</kbd><span>${label}</span></div>`).join('')}</div><p class="panel-note">靠近车门按 F；店铺门前按 E 打开后，用 WASD 实际走进去。货架选货后，到收银台付款。蓝色标记是商铺。</p>`);
+    this.shell('FIND YOUR OWN WAY', '操作指南', `<div class="controls-grid">${[['W A S D','步行 / 驾驶'],['点击场景后移动鼠标 / 方向键','上下左右镜头'],['L','锁定鼠标视角'],['SHIFT','冲刺'],['SPACE','跳跃 / 手刹'],['CTRL / C','蹲下'],['E','门 / 商品 / NPC'],['F','上车 / 下车'],['V','第一 / 第三人称'],['I / TAB','背包'],['M','城市地图 / 导航'],['R','游戏化抢劫'],['Q / 鼠标左键','徒手 / 装备攻击'],['1 / 2 / 3 / 4 / 5','切换装备'],['T','换弹'],['P / G','手机 / 指南'],['H','喇叭'],['F5 / F3','存档 / 性能面板']].map(([key, label]) => `<div><kbd>${key.split(' ').map(part => /^[A-Z]$/.test(part) ? keyLabel(this.preferences.bindings[`Key${part}`] ?? part) : part).join(' ')}</kbd><span>${label}</span></div>`).join('')}</div><p class="panel-note">靠近车门按 F；店铺门前按 E 对准门洞走入，A / D / S 可取消辅助。鼠标右键拖动也能控制镜头。货架选货后，到收银台付款。蓝色标记是商铺。</p>`);
   }
   dialogue(title: string, message: string, actions?: { label: string; action: () => void }[]) {
     this.mode = 'dialogue'; this.shell('PEOPLE OF PORT AZURE', title, `<p class="dialogue-text">${message}</p><div id="dialogue-actions" class="pause-actions"></div>`);
     for (const action of actions ?? []) { const button = document.createElement('button'); button.textContent = action.label; button.onclick = action.action; this.el('dialogue-actions').append(button); }
+  }
+  phone(service: PhoneService, ports: PhoneScreenPorts) {
+    this.shell('SIGNAL / PORT AZURE', '城市手机', '<div id="phone-host"></div>'); this.mode = 'phone'; this.modal.classList.add('phone-modal');
+    this.phoneScreen = new PhoneScreen(this.el('phone-host'), service, ports);
   }
   directory(places: PlaceEntry[], title: string, profile: string, ride?: { active: boolean }, time = 12) {
     this.mode = 'directory'; this.shell('PORT AZURE / CITY LIFE', title, `<p class="panel-intro">${profile}</p>${ride ? `<button id="taxi-job" class="primary">${ride.active ? '取消当前接送' : '接取社区接送 · 实际驾驶获得报酬'}</button>` : ''}<p class="panel-note">选择目的地设置 GPS。沿街商铺可实际推门进入；私人住宅需要钥匙。</p><div class="vehicle-catalog" id="places"></div>`);
@@ -241,6 +249,7 @@ export class UI {
     }; frame();
   }
   close() {
+    this.phoneScreen?.close(); this.phoneScreen = undefined; this.modal.classList.remove('phone-modal');
     this.cancelCapture?.(); this.cancelCapture = undefined; this.revisionCount++; cancelAnimationFrame(this.animation);
     if (document.activeElement instanceof HTMLElement && this.modal.contains(document.activeElement)) document.activeElement.blur();
     this.modal.classList.add('hidden'); this.mode = ''; this.callbacks?.resume();
@@ -250,6 +259,6 @@ export class UI {
   togglePerformance() { this.el('performance').classList.toggle('hidden'); }
   setWeather(value: string) { this.el('weather-label').textContent = value; }
   setStreaming(waiting: boolean) { this.el('streaming-shield').classList.toggle('hidden', !waiting); }
-  dispose() { this.cancelCapture?.(); cancelAnimationFrame(this.animation); clearTimeout(this.toastTimer); this.root.remove(); }
+  dispose() { this.phoneScreen?.close(); this.cancelCapture?.(); cancelAnimationFrame(this.animation); clearTimeout(this.toastTimer); this.root.remove(); }
   private el(id: string) { return this.root.querySelector<HTMLElement>(`#${id}`)!; }
 }

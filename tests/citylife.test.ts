@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Scene, Vector3 } from 'three';
+import { Scene, Vector3, PerspectiveCamera } from 'three';
 import { CityLife } from '../src/npc/CityLife';
 import { AssetManager } from '../src/assets/AssetManager';
 import { Physics } from '../src/physics/Physics';
@@ -16,7 +16,7 @@ describe('bounded NPC and traffic pools', () => {
   it('reuses the configured physical actors across distant region changes', () => {
     life.update(.016, new Vector3(0, 1, 0), streaming, false);
     const refs = assets.stats.references;
-    for (let x = 0; x < 8000; x += 256) { life.update(.016, new Vector3(x, 1, 0), streaming, false); physics.step(); }
+    for (let x = 0; x < 8000; x += 256) { life.update(.016, new Vector3(x, 1, 0), streaming, false); physics.step(); life.render(1 / 60); }
     expect(life.count).toBe(CITY_POPULATION.pedestrians); expect(physics.world.bodies.len()).toBe(life.poolCapacity); expect(assets.stats.references).toBe(refs);
     life.close(); expect(physics.world.bodies.len()).toBe(0); expect(assets.stats.references).toBe(0);
   });
@@ -31,7 +31,18 @@ describe('bounded NPC and traffic pools', () => {
   it('steps around a curbside obstruction instead of waiting against it indefinitely', () => {
     physics.box(0, -.5, 0, 1024, 1, 1024); physics.box(-44, 1, -9.1, .6, 2, .7);
     life.update(1 / 60, new Vector3(0, 1, 0), streaming, false); const person = life.nearest(new Vector3(-42, 1, -9.1))!;
-    for (let i = 0; i < 1200; i++) { life.update(1 / 60, new Vector3(0, 1, 0), streaming, false); physics.step(); }
+    for (let i = 0; i < 1200; i++) { life.update(1 / 60, new Vector3(0, 1, 0), streaming, false); physics.step(); life.render(1 / 60); }
     expect(person.model.group.position.x).toBeLessThan(-45);
+  });
+  it('transfers a traffic vehicle once and preserves the bounded actor pool', () => {
+    const player = new Vector3(0, 1, 0); life.update(1 / 60, player, streaming, false); physics.step();
+    const car = life.population(new PerspectiveCamera()).samples.find(sample => sample.kind === 'car')!;
+    const position = new Vector3(car.x, 1, car.z + 2);
+    expect(life.nearestVehicle(position)).toBeDefined();
+    const bodies = physics.world.bodies.len();
+    expect(life.claimVehicle(position)?.occupied).toBe(true);
+    expect(life.claimVehicle(position)).toBeNull();
+    expect(physics.world.bodies.len()).toBe(bodies);
+    life.close(); expect(assets.stats.references).toBe(0);
   });
 });

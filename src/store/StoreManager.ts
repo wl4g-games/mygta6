@@ -6,15 +6,17 @@ import type { StreamingManager } from '../world/StreamingManager';
 import { createInterior, type StoreInterior } from '../interior/InteriorFactory';
 import { storeForChunk, type StoreLocation } from './StoreArchetype';
 import { isStoreOpen, hoursLabel } from './StoreSchedule';
+import type { InteriorServices } from './ATMMachine';
+import { storeEnvelope } from '../interior/StoreEnvelope';
 
-export interface StoreAction { label: string; type: 'door' | 'fridge' | 'shelf' | 'checkout' | 'talk' | 'service'; store: StoreLocation; guest?: string; }
+export interface StoreAction { label: string; type: 'door' | 'fridge' | 'shelf' | 'checkout' | 'talk' | 'service' | 'atm' | 'club'; store: StoreLocation; guest?: string; machine?: string; }
 export class StoreManager {
   private loaded = new Map<string, { location: StoreLocation; interior: StoreInterior }>();
   current: StoreLocation | null = null;
   action: StoreAction | null = null;
   private time = 12;
   constructor(private readonly scene: THREE.Scene, private readonly assets: AssetManager, private readonly physics: Physics,
-    private readonly canEnter: (store: StoreLocation) => boolean = () => true) {}
+    private readonly canEnter: (store: StoreLocation) => boolean = () => true, private readonly services?: InteriorServices) {}
   update(dt: number, position: THREE.Vector3, streaming: StreamingManager, time = 12) {
     this.time = time;
     const center = chunkAt(position.x, position.z), wanted = new Set<string>();
@@ -22,7 +24,7 @@ export class StoreManager {
       const id = chunkKey(center.x + dx, center.z + dz), location = storeForChunk(id);
       if (location.x < -96 || Math.hypot(position.x - location.x, position.z - location.z) > 78 || !streaming.ready(location.x, location.z)) continue;
       wanted.add(id);
-      if (!this.loaded.has(id)) { const interior = createInterior(location, this.assets, this.physics); this.scene.add(interior.group); this.loaded.set(id, { location, interior }); }
+      if (!this.loaded.has(id)) { const interior = createInterior(location, this.assets, this.physics, this.services); this.scene.add(interior.group); this.loaded.set(id, { location, interior }); }
     }
     for (const [id, entry] of this.loaded) if (!wanted.has(id)) { this.unload(entry.interior, id); this.loaded.delete(id); }
     this.current = null; this.action = null;
@@ -30,9 +32,11 @@ export class StoreManager {
     for (const { location: s, interior: i } of this.loaded.values()) {
       i.door.rotation.y = THREE.MathUtils.damp(i.door.rotation.y, i.doorOpen ? -Math.PI / 2 : 0, 10, dt);
       i.fridge.update(dt);
+      for (const machine of i.machines) machine.update(dt);
       i.merchant.animate(dt, 0);
-      const inside = Math.abs(position.x - s.x) < 13.8 && position.z < s.z + 12.85 && position.z > s.z - 12.8;
+      const inside = Math.abs(position.x - s.x) < 13.8 && position.z < s.z + 12.85 && position.z > s.z - 12.8 && position.y < storeEnvelope(s.archetype.kind).roof - .15;
       const open = isStoreOpen(s.archetype.kind, time);
+      i.club?.update(dt, open || inside);
       i.merchant.group.visible = s.archetype.kind !== 'home' && (open || inside);
       i.policeHold = Math.max(0, i.policeHold - dt);
       for (const guest of i.guests) { guest.model.group.visible = open || inside; if (guest.model.group.visible) guest.model.ride(dt); }
@@ -43,9 +47,12 @@ export class StoreManager {
       }
       if (inside) this.current = s;
       i.details.visible = inside || Math.hypot(position.x - s.x, position.z - s.z - 13) < 55 && position.z > s.z + 10;
-      const targets: { x: number; z: number; label: string; type: StoreAction['type']; guest?: string }[] = [
-        { x: s.x, z: s.z + 13, label: !open && !inside ? `CLOSED · 营业 ${hoursLabel(s.archetype.kind)}` : this.canEnter(s) ? `${i.doorOpen ? 'Close' : 'Open'} ${s.archetype.name} · 店门` : 'Locked residence · 请先向房产中介租赁', type: 'door' },
+      const targets: { x: number; z: number; y?: number; label: string; type: StoreAction['type']; guest?: string; machine?: string }[] = [
+        { x: s.x, z: s.z + 13, label: !open && !inside ? `CLOSED · 营业 ${hoursLabel(s.archetype.kind)}` : this.canEnter(s) ? `${inside ? 'Exit · 离开' : 'Enter · 进入'} ${s.archetype.name}` : 'Locked residence · 请先向房产中介租赁', type: 'door' },
       ];
+      if (inside) for (const action of i.club?.actions ?? []) targets.push({ x: action.position.x, y: action.position.y, z: action.position.z, label: action.label, type: 'club', guest: action.id });
+      for (const machine of i.machines) if (inside || machine.position.z > s.z + 13) targets.push({ x: machine.position.x, z: machine.position.z + 1.1, type: 'atm', machine: machine.id,
+        label: machine.interaction === 'cash' ? 'Pick up cash · 拾取散落现金 $120' : machine.interaction === 'empty' ? 'ATM 已损毁 / 已清空' : 'ATM · 存取现金 / Q 攻击会触发警报' });
       if (s.archetype.kind === 'fuel') for (const offset of [-5, 5]) targets.push({ x: s.x + 21, z: s.z + offset, label: 'Fuel pump · 加油与付款', type: 'service' });
       if (['auto', 'carwash'].includes(s.archetype.kind)) targets.push({ x: s.x + 24, z: s.z + 12, label: s.archetype.kind === 'auto' ? 'Repair bay · 维修服务' : 'Car wash bay · 洗车服务', type: 'service' });
       if (inside) targets.push(
@@ -59,15 +66,18 @@ export class StoreManager {
       if (inside && s.archetype.kind === 'home') targets.push({ x: s.x - 8, z: s.z - 3, label: 'Sleep & save · 在床边休息存档', type: 'shelf' });
       if (inside && s.archetype.kind === 'auto') targets.push({ x: s.x - 6, z: s.z - 6, label: 'Inspect showroom / buy a vehicle · 查看展车', type: 'checkout' });
       for (const target of targets) {
-        const d = Math.hypot(position.x - target.x, position.z - target.z);
-        if (d < (target.type === 'door' ? 4.3 : 3.5) && d < distance) { distance = d; this.action = { label: target.label, type: target.type, store: s, guest: target.guest }; }
+        if (Math.abs(position.y - (target.y ?? 1)) > 2) continue;
+        const d = Math.hypot(position.x - target.x, position.z - target.z, position.y - (target.y ?? 1));
+        if (d < (target.type === 'door' ? 6 : target.type === 'atm' ? 2.5 : 3.5) && d < distance) { distance = d; this.action = { label: target.label, type: target.type, store: s, guest: target.guest, machine: target.machine }; }
       }
     }
   }
-  toggleDoor(id: string) {
+  toggleDoor(id: string, open = false) {
     const entry = this.loaded.get(id);
     if (!entry || !this.canEnter(entry.location) || !isStoreOpen(entry.location.archetype.kind, this.time) && this.current?.id !== id && !entry.interior.doorOpen) return false;
-    const { interior: i, location: s } = entry; i.doorOpen = !i.doorOpen;
+    const { interior: i, location: s } = entry;
+    if (open && i.doorOpen) return true;
+    i.doorOpen = open || !i.doorOpen;
     if (i.doorOpen && i.doorCollider) { this.physics.remove(i.doorCollider); i.doorCollider = undefined; }
     else i.doorCollider = this.physics.box(s.x, 1.5, s.z + 13, 3.6, 3, .15);
     return true;
@@ -80,7 +90,10 @@ export class StoreManager {
     }
   }
   scareMerchant(id: string) { const merchant = this.loaded.get(id)?.interior.merchant; if (!merchant?.group.visible) return false; merchant.scare(); return true; }
-  private unload(i: StoreInterior, id?: string) { const roof = this.scene.getObjectByName(`storeRoof:${id}`); if (roof) roof.visible = true; for (const collider of i.colliders) this.physics.remove(collider); if (i.doorCollider) this.physics.remove(i.doorCollider); i.fridge.close(); this.assets.disposeGroup(i.group); }
+  clubDialogue(store: string, actor: string) { return this.loaded.get(store)?.interior.club?.interact(actor) ?? ''; }
+  get clubCast() { return [...this.loaded.values()].flatMap(entry => entry.interior.club?.cast ?? []); }
+  interactATM(store: string, id: string) { const machine = this.loaded.get(store)?.interior.machines.find(item => item.id === id); if (!machine) return false; if (machine.interaction === 'bank') return true; machine.interact(); return false; }
+  private unload(i: StoreInterior, id?: string) { const roof = this.scene.getObjectByName(`storeRoof:${id}`); if (roof) roof.visible = true; for (const collider of i.colliders) this.physics.remove(collider); if (i.doorCollider) this.physics.remove(i.doorCollider); i.fridge.close(); i.club?.close(); for (const machine of i.machines) machine.close(); this.assets.disposeGroup(i.group); }
   get count() { return this.loaded.size; }
   close() { for (const [id, { interior }] of this.loaded) this.unload(interior, id); this.loaded.clear(); }
 }

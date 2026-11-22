@@ -26,9 +26,10 @@ export class Physics {
   blocked(from: Vector3Like, to: Vector3Like, exclude?: RAPIER.RigidBody, ignoreCharacters = false): number | null {
     const d = { x: to.x - from.x, y: to.y - from.y, z: to.z - from.z };
     const length = Math.hypot(d.x, d.y, d.z);
+    if (!Number.isFinite(length) || length < .00001) return null;
     const hit = this.world.castRay(new RAPIER.Ray(from, { x: d.x / length, y: d.y / length, z: d.z / length }), length, true, undefined, undefined, undefined, exclude,
       ignoreCharacters ? collider => collider.shapeType() !== RAPIER.ShapeType.Capsule : undefined);
-    return hit?.timeOfImpact ?? null;
+    return hit && Number.isFinite(hit.timeOfImpact) ? hit.timeOfImpact : null;
   }
   groundHeight(x: number, z: number, above: number, exclude: RAPIER.RigidBody): number | null {
     const hit = this.world.castRay(new RAPIER.Ray({ x, y: above, z }, { x: 0, y: -1, z: 0 }), 40, true, undefined, undefined, undefined, exclude,

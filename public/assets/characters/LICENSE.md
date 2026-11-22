@@ -20,3 +20,7 @@ The GLB files are unmodified copies. The game normalizes instances, blends their
 ## Additional detailed citizen
 
 `citizen.glb` is the Casual Walker model, v1 LOD1, by tevy under CC0 1.0. Source: https://tevy.dev/models/casual-walker . Version, source paths and file hashes are preserved in `citizen-source.json`. It supplies a 56-bone pedestrian with idle / walk / wave / look-around clips. The game may adjust instance appearance and size. Verified 2026-11-21.
+
+## Formal lounge clothing
+
+`male-suit.glb` is Quaternius Male Suit from the same pinned CC0 pack/mirror, `public/models/Male/Suit.glb`. SHA-256: `500ae95582c31288606934f6d28a8d2c5122e1e96a5b99a776da36197250de12`. The two-piece swimwear variant retains the licensed female head, arms, skeleton and animations. Original opaque costume panels and simplified body/leg geometry are attached at runtime; the casual shirt and trousers are hidden. No anatomical nude mesh is added.

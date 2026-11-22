@@ -32,7 +32,8 @@ test('a responding officer leaves the patrol car, enters the store and completes
   await page.keyboard.press('KeyR');
   await expect.poll(async () => (await snapshot(page)).policeOnFoot, { timeout: 30000 }).toBe(true);
   await page.screenshot({ path: 'artifacts/police-response.png' });
-  await expect.poll(async () => (await snapshot(page)).wanted, { timeout: 45000 }).toBe(0);
+  let lastLog = 0;
+  await expect.poll(async () => { const state = await snapshot(page); if (Date.now() - lastLog > 5000) { lastLog = Date.now(); console.log('Store pursuit', JSON.stringify({ wanted: state.wanted, car: state.policeCar, officer: state.officerPosition, player: state.position })); } return state.wanted; }, { timeout: 45000 }).toBe(0);
   const state = await snapshot(page); expect(state.position[2]).toBeGreaterThan(-12); expect(state.health).toBe(100);
   await expect(page.locator('#toast')).toContainText('被捕');
 });

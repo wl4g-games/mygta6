@@ -10,6 +10,7 @@ import type { StreamingManager } from '../world/StreamingManager';
 import { isBridge } from '../city/Infrastructure';
 import { WORLD } from '../config/game';
 import { animateVehicle } from './VehicleAnimation';
+import { DrivingPose } from './DrivingPose';
 
 export { createCarModel } from './VehicleVisual';
 
@@ -28,11 +29,13 @@ export class Vehicle implements IVehicle {
   color = this.definition.color;
   private rider?: HumanModel;
   private passenger?: HumanModel;
+  private drivingPose: DrivingPose;
   constructor(private readonly physics: Physics, private readonly assets: AssetManager, scene: THREE.Scene) {
     this.body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(19, .8, -6.7).setLinearDamping(.05).setAngularDamping(5).enabledRotations(false, true, false).setCcdEnabled(true).setCanSleep(true));
     this.body.userData = { kind: 'playerVehicle' };
     this.createCollider();
     this.group = createCarModel(assets); scene.add(this.group);
+    this.drivingPose = new DrivingPose(this.group);
     this.body.setRotation({ x: 0, y: Math.sin(this.yaw / 2), z: 0, w: Math.cos(this.yaw / 2) }, true); this.sync(0);
   }
   enter(appearance?: { shirt: string; haircut: boolean }) {
@@ -78,8 +81,6 @@ export class Vehicle implements IVehicle {
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     this.fuel = Math.max(0, this.fuel - Math.abs(speed) * dt * .0025);
     this.distance += Math.abs(speed) * dt;
-    this.rider?.ride(dt);
-    this.passenger?.ride(dt);
   }
   sync(dt: number) {
     const p = this.body.translation(), v = this.body.linvel();
@@ -112,6 +113,7 @@ export class Vehicle implements IVehicle {
   repaint(color: string) {
     const parent = this.group.parent; this.assets.disposeGroup(this.group); this.rider = undefined; this.passenger = undefined; this.color = color;
     this.group = createCarModel(this.assets, color, this.definition.kind === 'police', this.definition); parent?.add(this.group); this.sync(0);
+    this.drivingPose = new DrivingPose(this.group);
   }
   select(id: string) {
     const oldRide = vehicleMetrics(this.definition).rideHeight, next = vehicleDefinition(id);
@@ -126,7 +128,17 @@ export class Vehicle implements IVehicle {
   get cameraView() {
     return vehicleView(this.definition);
   }
-  firstPerson(active: boolean) { if (this.rider) { this.rider.headVisible(true); this.rider.group.visible = !active; } }
+  firstPerson(active: boolean, passenger = false) {
+    if (this.rider) { this.rider.group.visible = true; this.rider.onlyArms(active && !passenger); }
+    if (this.passenger) { this.passenger.group.visible = true; this.passenger.onlyArms(active && passenger); }
+  }
+  animateOccupants(dt: number, phone?: THREE.Vector3, passengerPhone = false) {
+    this.drivingPose.update(dt, this.rider, passengerPhone ? undefined : phone); this.passenger?.ride(dt);
+    if (passengerPhone && phone) this.passenger?.reach('left', phone);
+  }
+  get holder() { return this.rider; }
+  get passengerHolder() { return this.passenger; }
+  get handDiagnostics() { return this.drivingPose.diagnostics; }
   restore(state: { x: number; y: number; z: number; yaw: number; fuel: number; health: number; definitionId?: string; color?: string }) {
     this.expectedSpeed = 0;
     this.lastImpact = undefined;

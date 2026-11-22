@@ -5,7 +5,7 @@ export const WORLD = {
   fixedStep: 1 / 60,
   concurrentLoads: 2,
   memoryBudgetMB: 160,
-  spawn: { x: 28, y: 1.1, z: -9.8 },
+  spawn: { x: 32, y: 1.1, z: -9.8 },
   store: { x: 32, z: -27, width: 28, depth: 26, doorZ: -14 },
 } as const;
 

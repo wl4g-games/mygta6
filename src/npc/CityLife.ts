@@ -13,9 +13,10 @@ import { createDriver, vehicleMetrics } from '../vehicle/VehicleVisual';
 import { trafficSignals } from '../city/TrafficSignals';
 import { animateVehicle } from '../vehicle/VehicleAnimation';
 import { parkingPositions } from '../city/ParkingLayout';
+import { canReachVehicle } from '../vehicle/VehicleAccess';
 
-interface Pedestrian { name: string; profession: string; model: HumanModel; body: RAPIER.RigidBody; collider: RAPIER.Collider; axis: 'x' | 'z'; animationDebt: number; originX: number; originZ: number; phase: number; direction: number; health: number; downTime: number; blocked: number; avoid: number; state: 'walk' | 'wait' | 'flee' | 'down'; }
-interface Traffic { model: THREE.Group; body: RAPIER.RigidBody; phase: number; lane: number; originX: number; originZ: number; axis: 'x' | 'z'; parked: boolean; driver?: HumanModel; animationDebt: number; rideHeight: number; }
+interface Pedestrian { name: string; profession: string; model: HumanModel; body: RAPIER.RigidBody; collider: RAPIER.Collider; axis: 'x' | 'z'; animationDebt: number; originX: number; originZ: number; phase: number; direction: number; health: number; downTime: number; blocked: number; avoid: number; target: THREE.Vector3; speed: number; distance: number; heading: number; state: 'walk' | 'wait' | 'flee' | 'down'; }
+interface Traffic { model: THREE.Group; body: RAPIER.RigidBody; phase: number; lane: number; originX: number; originZ: number; axis: 'x' | 'z'; parked: boolean; driver?: HumanModel; animationDebt: number; rideHeight: number; availableAt: number; definitionId: string; color: string; }
 /** A bounded pool simulates only the player's neighborhood; distant residents are implicit. */
 export class CityLife {
   private pedestrians: Pedestrian[] = [];
@@ -35,7 +36,8 @@ export class CityLife {
     const c = chunkAt(player.x, player.z), key = `${c.x},${c.z}`;
     if (key !== this.cell) { this.cell = key; if (!this.pedestrians.length) this.spawn(c.x * 128, c.z * 128, player); }
     for (const [index, ped] of this.pedestrians.entries()) {
-      let distance = ped.model.group.position.distanceTo(player);
+      const physical = ped.body.translation();
+      let distance = Math.hypot(physical.x - player.x, physical.z - player.z);
       let recycled = false;
       if (distance > 185) {
         recycled = true;
@@ -50,7 +52,7 @@ export class CityLife {
       }
       const danger = this.alarm > 0 && distance < 65;
       ped.state = danger ? 'flee' : Math.sin(this.clock * .15 + index) > (night ? .4 : .85) ? 'wait' : 'walk';
-      const progress = ped.axis === 'x' ? ped.model.group.position.x : ped.model.group.position.z;
+      const progress = ped.axis === 'x' ? physical.x : physical.z;
       const local = ((progress + 64) % 128 + 128) % 128 - 64, direction = Math.cos(ped.phase * .035) * ped.direction > 0 ? 1 : -1;
       const inRoad = Math.abs(local) < 8, atCrossing = Math.abs(local) > 8 && Math.abs(local) < 12 && local * direction < 0;
       const crossingAllowed = ped.axis === 'x' ? signals.x === 'green' : signals.z === 'green';
@@ -67,8 +69,8 @@ export class CityLife {
         if (ped.axis === 'x') walkZ += side * (.8 + index % 2 * .6); else walkX += side * (.8 + index % 2 * .6);
       }
       if (danger) {
-        walkX = ped.model.group.position.x + (ped.axis === 'x' ? (Math.sign(ped.model.group.position.x - player.x) || 1) * speed * dt : 0);
-        walkZ = ped.model.group.position.z + (ped.axis === 'z' ? (Math.sign(ped.model.group.position.z - player.z) || 1) * speed * dt : 0);
+        walkX = physical.x + (ped.axis === 'x' ? (Math.sign(physical.x - player.x) || 1) * speed * dt : 0);
+        walkZ = physical.z + (ped.axis === 'z' ? (Math.sign(physical.z - player.z) || 1) * speed * dt : 0);
       }
       const separation = Math.hypot(walkX - player.x, walkZ - player.z);
       if (separation < 1.4) {
@@ -85,17 +87,17 @@ export class CityLife {
         const movement = this.controller.computedMovement();
         actualSpeed = Math.hypot(movement.x, movement.z) / dt;
         ped.body.setNextKinematicTranslation({ x: old.x + movement.x, y: old.y + movement.y, z: old.z + movement.z });
-        ped.model.group.position.set(old.x + movement.x, old.y + movement.y - .93, old.z + movement.z);
-        if (actualSpeed > .1) ped.model.group.rotation.y = Math.atan2(-movement.x, -movement.z);
+        ped.target.set(old.x + movement.x, old.y + movement.y - .93, old.z + movement.z);
+        if (recycled || ped.model.group.position.distanceToSquared(ped.target) > 1600) ped.model.group.position.copy(ped.target);
+        if (actualSpeed > .1) ped.heading = Math.atan2(-movement.x, -movement.z);
         ped.blocked = speed > .2 && actualSpeed < .1 ? ped.blocked + dt : 0;
         if (ped.blocked > .7) { ped.avoid = 2.5; ped.blocked = 0; }
       }
-      distance = ped.model.group.position.distanceTo(player);
+      ped.speed = actualSpeed; ped.distance = distance;
       ped.model.group.visible = distance < 160 && ready;
-      ped.animationDebt += dt;
-      if (ped.model.group.visible && (distance < 45 || ped.animationDebt > .1)) { ped.model.animate(ped.animationDebt, actualSpeed); ped.animationDebt = 0; }
     }
     for (const [index, car] of this.traffic.entries()) {
+      if (car.availableAt > this.clock) { car.model.visible = false; car.body.setEnabled(false); continue; }
       if (car.model.position.distanceTo(player) > 210) {
         car.originX = c.x * 128; car.originZ = c.z * 128;
         if (car.parked) {
@@ -124,6 +126,7 @@ export class CityLife {
       car.model.visible = streaming.ready(tx, tz) && (tx > -177 || car.axis === 'x' && isBridge(tx, tz)) && !(car.parked && Math.abs(tz + 512) < 15);
       car.body.setEnabled(car.model.visible);
       if (car.model.visible) {
+        if (!car.parked && !car.driver) { car.driver = createDriver(this.assets, vehicleDefinition(car.definitionId)); car.model.add(car.driver.group); }
         car.model.position.set(tx, y, tz);
         const old = car.body.translation(); if (Math.hypot(old.x - tx, old.z - tz) > 20) car.body.setTranslation({ x: tx, y, z: tz }, false);
         car.body.setNextKinematicTranslation({ x: tx, y, z: tz });
@@ -147,11 +150,12 @@ export class CityLife {
       const collider = this.physics.world.createCollider(RAPIER.ColliderDesc.capsule(.65, .28).setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS), body);
       this.pedestrians.push({ name: ['Morgan', 'Nia', 'Sam', 'River', 'Avery', 'Alex', 'Jordan', 'Mika', 'Casey', 'Kai', 'Remy', 'Robin'][i % 12],
         profession: ['邻居', '慢跑者', '配送员', '上班族'][i % 4], model, body, collider, axis, animationDebt: 0, originX, originZ, phase, direction: i % 2 ? 1 : -1,
-        health: 100, downTime: 0, blocked: 0, avoid: 0, state: 'walk' });
+        health: 100, downTime: 0, blocked: 0, avoid: 0, target: model.group.position.clone(), speed: 0, distance: 0, heading: 0, state: 'walk' });
     }
     for (let i = 0; i < CITY_POPULATION.traffic + CITY_POPULATION.parked; i++) {
       const parked = i >= CITY_POPULATION.traffic, definition = parked ? VEHICLES[i % 5] : vehicleDefinition(i === 4 ? 'transit' : i % 9 === 1 ? 'metro' : i % 11 === 2 ? 'mesa' : 'coastline');
-      const model = createCarModel(this.assets, parked ? definition.color : ['#b6a58b', '#768c95', '#a07560', '#5f6f5d', '#b4ada0'][i % 5], false, definition);
+      const color = parked ? definition.color : ['#b6a58b', '#768c95', '#a07560', '#5f6f5d', '#b4ada0'][i % 5];
+      const model = createCarModel(this.assets, color, false, definition);
       const axis = parked || i % 3 ? 'x' : 'z', lane = (i % 2 ? 1 : -1) * (parked ? 6.7 : 4);
       model.rotation.y = axis === 'x' ? lane > 0 ? Math.PI / 2 : -Math.PI / 2 : lane > 0 ? 0 : Math.PI;
       const spots = parkingPositions(x, z, lane);
@@ -167,10 +171,46 @@ export class CityLife {
       body.setRotation({ x: 0, y: Math.sin(model.rotation.y / 2), z: 0, w: Math.cos(model.rotation.y / 2) }, false);
       const metrics = vehicleMetrics(definition);
       this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(definition.width / 2, definition.height / 2, definition.length / 2).setTranslation(0, metrics.colliderOffset, 0), body);
-      this.scene.add(model); this.traffic.push({ model, body, phase, lane, originX: x, originZ: z, axis, parked, driver, animationDebt: 0, rideHeight: metrics.rideHeight });
+      this.scene.add(model); this.traffic.push({ model, body, phase, lane, originX: x, originZ: z, axis, parked, driver, animationDebt: 0, rideHeight: metrics.rideHeight, availableAt: 0, definitionId: definition.id, color });
     }
   }
   nearest(position: THREE.Vector3) { return this.pedestrians.find(p => p.health > 0 && p.model.group.visible && p.model.group.position.distanceTo(position) < 3.5); }
+  render(dt: number) {
+    for (const ped of this.pedestrians) {
+      if (!ped.model.group.visible || ped.health <= 0) { ped.animationDebt = 0; continue; }
+      ped.model.group.position.lerp(ped.target, 1 - Math.exp(-24 * dt));
+      const angle = THREE.MathUtils.euclideanModulo(ped.heading - ped.model.group.rotation.y + Math.PI, Math.PI * 2) - Math.PI;
+      ped.model.group.rotation.y += angle * (1 - Math.exp(-12 * dt));
+      ped.animationDebt += dt;
+      if (ped.distance < 45 || ped.animationDebt >= .1) { ped.model.animate(ped.animationDebt, ped.speed); ped.animationDebt = 0; }
+    }
+  }
+  nearestVehicle(position: THREE.Vector3) {
+    return this.traffic.filter(car => car.model.visible && car.availableAt <= this.clock && car.body.isEnabled() && Math.abs(position.y - car.body.translation().y) < 2.5)
+      .map(car => {
+        const local = position.clone().sub(car.model.position).applyAxisAngle(new THREE.Vector3(0, 1, 0), -car.model.rotation.y), d = vehicleDefinition(car.definitionId);
+        return { car, distance: Math.hypot(Math.max(0, Math.abs(local.x) - d.width / 2), Math.max(0, Math.abs(local.z) - d.length / 2)) };
+      }).filter(candidate => candidate.distance < 2.8 && canReachVehicle(this.physics, position, candidate.car.body)).sort((a, b) => a.distance - b.distance)[0];
+  }
+  claimVehicle(position: THREE.Vector3) {
+    const candidate = this.nearestVehicle(position); if (!candidate) return null;
+    const { car } = candidate, p = car.body.translation();
+    const state = { x: p.x, y: p.y + .08, z: p.z, yaw: car.model.rotation.y, definitionId: car.definitionId, color: car.color, fuel: 85, health: 100, occupied: !car.parked };
+    car.availableAt = this.clock + 60; car.model.visible = false; car.body.setEnabled(false);
+    car.originX += 256; // Reuse this pooled actor away from the player after the cooldown.
+    if (car.driver) {
+      const person = this.pedestrians.find(ped => ped.health > 0 && ped.distance > 50);
+      if (person) {
+        const x = p.x + Math.cos(state.yaw) * 2.2, z = p.z - Math.sin(state.yaw) * 2.2;
+        this.assets.disposeGroup(person.model.group); person.model = car.driver; car.driver = undefined;
+        person.model.group.removeFromParent(); person.model.group.scale.setScalar(1); person.model.group.rotation.set(0, state.yaw, 0); person.model.animate(0, 0); this.scene.add(person.model.group);
+        person.originX = x; person.originZ = z; person.phase = 0; person.target.set(x, sidewalkHeight(x, z), z);
+        person.body.setTranslation({ x, y: person.target.y + .955, z }, false); person.body.setNextKinematicTranslation({ x, y: person.target.y + .955, z });
+        person.model.group.position.copy(person.target); person.model.group.visible = true; person.profession = '司机'; person.state = 'flee';
+      }
+    }
+    this.alarm = 12; return state;
+  }
   vehicleImpact(index: number, speed: number) {
     const person = this.pedestrians[index]; if (!person || person.health <= 0 || speed < 3) return false;
     person.health = Math.max(0, person.health - speed * 12); this.alarm = 25; return true;
@@ -202,7 +242,7 @@ export class CityLife {
     return { pedestrians: this.pedestrians.length, traffic: this.traffic.filter(car => !car.parked).length,
       parked: this.traffic.filter(car => car.parked).length, peopleInView: this.pedestrians.filter(p => p.model.group.visible && projected(p.model.group)).length,
       carsInView: this.traffic.filter(car => car.model.visible && projected(car.model)).length,
-      samples: [...this.pedestrians.filter(p => p.model.group.visible).slice(0, 8).map(p => ({ kind: 'person', x: p.body.translation().x, z: p.body.translation().z })),
+      samples: [...this.pedestrians.filter(p => p.model.group.visible).slice(0, 8).map(p => ({ kind: 'person', x: p.body.translation().x, z: p.body.translation().z, visualX: p.model.group.position.x, visualZ: p.model.group.position.z })),
         ...this.traffic.filter(car => !car.parked && car.model.visible).slice(0, 8).map(car => ({ kind: 'car', x: car.body.translation().x, z: car.body.translation().z }))] };
   }
   close() { if (this.closed) return; this.closed = true; this.clear(); this.physics.world.removeCharacterController(this.controller); }

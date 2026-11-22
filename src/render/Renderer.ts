@@ -7,6 +7,8 @@ import { FloatingOriginManager } from '../world/FloatingOriginManager';
 import { Celestial } from './Celestial';
 import type { WeatherType } from './Weather';
 import { PostProcessing } from './PostProcessing';
+import { shortenCameraRay } from './CameraCollision';
+import { CockpitCamera } from './CockpitCamera';
 
 export class Renderer {
   readonly scene = new THREE.Scene();
@@ -20,6 +22,7 @@ export class Renderer {
   private readonly desired = new THREE.Vector3();
   private readonly target = new THREE.Vector3();
   private readonly cameraWorld = new THREE.Vector3();
+  private readonly cockpit = new CockpitCamera();
   private readonly localTarget = new THREE.Vector3();
   private readonly celestial: Celestial;
   private readonly post: PostProcessing;
@@ -102,24 +105,22 @@ export class Renderer {
     } else {
       this.target.copy(position).add(new THREE.Vector3(0, driving ? this.firstPerson ? vehicleView.eye : 1 : this.firstPerson ? .8 : .7, 0));
       if (driving && this.firstPerson) {
-        const rotation = body.rotation(), heading = 2 * Math.atan2(rotation.y, rotation.w);
-        this.target.x += vehicleView.x * Math.cos(heading) + vehicleView.z * Math.sin(heading);
-        this.target.z += -vehicleView.x * Math.sin(heading) + vehicleView.z * Math.cos(heading);
-      }
-      const distance = this.firstPerson ? .03 : driving ? vehicleView.distance : 5.6;
+        const pose = this.cockpit.pose(body.translation(), body.rotation(), vehicleView, this.yaw); this.target.copy(pose.anchor); this.yaw = pose.yaw;
+      } else this.cockpit.reset();
+      const distance = this.firstPerson ? 0 : driving ? vehicleView.distance : 5.6;
       this.desired.set(this.target.x + Math.sin(this.yaw) * Math.cos(this.pitch) * distance,
         this.target.y + Math.sin(this.pitch) * distance + (this.firstPerson ? 0 : 1.1),
         this.target.z + Math.cos(this.yaw) * Math.cos(this.pitch) * distance);
       if (!this.firstPerson) {
         const hit = physics.blocked(this.target, this.desired, body, true);
-        if (hit !== null) this.desired.copy(this.target).lerp(this.desired, Math.max(.1, (hit - .25) / this.target.distanceTo(this.desired)));
+        if (hit !== null) shortenCameraRay(this.target, this.desired, hit, .25);
       }
     }
-    if (this.cameraWorld.distanceTo(this.desired) > 120) this.cameraWorld.copy(this.desired);
+    if (this.firstPerson && !menu || ![this.cameraWorld.x, this.cameraWorld.y, this.cameraWorld.z].every(Number.isFinite) || this.cameraWorld.distanceTo(this.desired) > 120) this.cameraWorld.copy(this.desired);
     else this.cameraWorld.lerp(this.desired, 1 - Math.exp(-dt * (menu ? 3 : 12)));
     if (!menu && !this.firstPerson) {
       const hit = physics.blocked(this.target, this.cameraWorld, body, true);
-      if (hit !== null) this.cameraWorld.copy(this.target).lerp(this.cameraWorld, Math.max(.05, (hit - .2) / this.target.distanceTo(this.cameraWorld)));
+      if (hit !== null) shortenCameraRay(this.target, this.cameraWorld, hit);
     }
     if (this.firstPerson && !menu) {
       this.target.copy(this.desired).sub(new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch)));

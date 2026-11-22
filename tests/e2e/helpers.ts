@@ -8,12 +8,19 @@ export interface Snapshot {
   colliders: number; mission: number; wanted: number; policeOnFoot: boolean; fps: number; render: { geometries: number; textures: number }; distance: number;
   resident: { geometries: number; textures: number }; groundReady: boolean;
   swimming: boolean; firstPerson: boolean; renderOrigin: number[]; poolCapacity: number;
+  camera: { yaw: number; pitch: number; position: number[] };
+  drivingHands: { wheel: boolean; contacts: number; error: number; palms: number[][] }; phoneVisible: boolean; officerPosition?: number[]; policeCar?: number[];
+  phone?: { call: { status: string; line: string } | null; threads: Record<string, { text: string; outgoing: boolean }[]>; posts: Record<string, { liked: boolean; comments: { text: string }[] }> };
+  machines?: Record<string, { health: number; claimed: boolean; alarmed: boolean }>;
+  clubCast: { name: string; role: string; position: number[]; rigged: boolean }[];
+  hailedRide?: { stage: string; pickup: { x: number; z: number }; destination: { x: number; z: number }; fee: number };
+  riding: boolean; hailedVehicle?: number[];
   rigged: boolean; vehicleId: string; vehicleYaw: number; vehicleColor: string;
   equipment: { selected: string | null; weapons: Record<string, { clip: number; reserve: number }> };
   waypoint: { x: number; z: number } | null;
   taxi: { stage: 'idle' | 'pickup' | 'boarding' | 'riding'; meters: number; completed: number; pickup: { x: number; z: number }; destination: { x: number; z: number } };
   carriedItem: { id?: string; position?: number[] };
-  population: { pedestrians: number; traffic: number; parked: number; peopleInView: number; carsInView: number; samples: { kind: string; x: number; z: number }[] };
+  population: { pedestrians: number; traffic: number; parked: number; peopleInView: number; carsInView: number; samples: { kind: string; x: number; z: number; visualX?: number; visualZ?: number }[] };
 }
 
 export async function pullIntoLane(page: Page, roadZ = 0) {
@@ -39,7 +46,7 @@ export async function pullIntoLane(page: Page, roadZ = 0) {
   } finally { for (const code of held) await page.keyboard.up(code); }
 }
 
-declare global { interface Window { __city: { snapshot(): Snapshot; driveSensor(direction?: number): { x: number; speed: number; obstacle: number; green: boolean; groundReady: boolean }; save(): Promise<void>; teleport(x: number, z: number, yaw?: number): void; vehicleTeleport(x: number, z: number, yaw: number, y?: number): void; weather(type: string): void; time(hour: number): void; }; } }
+declare global { interface Window { __city: { snapshot(): Snapshot; lookAt(x: number, y: number, z: number): void; cockpit(): { rays: number; obstructed: number; eye: number[] }; driveSensor(direction?: number): { x: number; speed: number; obstacle: number; green: boolean; groundReady: boolean }; save(): Promise<void>; teleport(x: number, z: number, yaw?: number): void; vehicleTeleport(x: number, z: number, yaw: number, y?: number): void; weather(type: string): void; time(hour: number): void; }; } }
 export const snapshot = (page: Page) => page.evaluate(() => window.__city.snapshot());
 export async function start(page: Page) {
   await page.goto('/?e2e=1&quality=low');

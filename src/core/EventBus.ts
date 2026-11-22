@@ -11,6 +11,9 @@ export interface GameEvents {
   saved: void;
   navigate: { x: number; z: number };
   thunder: { distance: number };
+  phoneChanged: void;
+  speak: { text: string };
+  worldChanged: void;
 }
 
 /** Synchronous typed domain events; listeners never own rendering or physics objects. */

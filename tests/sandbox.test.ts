@@ -10,6 +10,12 @@ import { AssetManager } from '../src/assets/AssetManager';
 import { storeForChunk } from '../src/store/StoreArchetype';
 import type { StreamingManager } from '../src/world/StreamingManager';
 describe('crime, police and persistent event integration', () => {
+  it('keeps the officer in the car through intermediate junctions and disembarks at the store approach', async () => {
+    physics.box(0, -.5, 0, 512, 1, 512); physics.step(); events.emit('crime', { severity: 2, x: 32, z: -20 });
+    const streaming = { ready: () => true } as unknown as StreamingManager;
+    for (let frame = 0; frame < 1500 && !sandbox.policeOnFoot; frame++) { sandbox.update(1 / 60, new Vector3(32, 1.1, -20), 0, true, streaming); physics.step(); }
+    expect(sandbox.policeOnFoot).toBe(true); expect(sandbox.policePosition!.x).toBeGreaterThan(28); expect(sandbox.policePosition!.z).toBeLessThan(0);
+  });
   let physics: Physics, assets: AssetManager, life: CityLife, sandbox: Sandbox, events: EventBus, economy: Economy, state: WorldStateStore;
   beforeEach(async () => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ({ fillRect() {}, fillText() {} }) }) });

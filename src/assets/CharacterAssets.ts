@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { addSwimwear } from '../character/Swimwear';
 
 export interface CharacterLease {
   root: THREE.Group; clips: THREE.AnimationClip[]; dispose(): void;
@@ -9,6 +10,7 @@ export interface CharacterLease {
 const DEFINITIONS = [
   { id: 'male', url: '/assets/characters/male.glb' },
   { id: 'female', url: '/assets/characters/female.glb' },
+  { id: 'male-suit', url: '/assets/characters/male-suit.glb' },
 ] as const;
 interface Entry { data: GLTF; refs: number; }
 
@@ -39,7 +41,8 @@ export class CharacterAssets {
     return this.loading;
   }
   acquire(id: string, shirt: string, skin: string, haircut: boolean): CharacterLease | null {
-    const entry = this.entries.get(id); if (!entry) return null;
+    const swimwear = id === 'female-swim';
+    const entry = this.entries.get(swimwear ? 'female' : id); if (!entry) return null;
     const root = clone(entry.data.scene) as THREE.Group, materials = new Map<THREE.Material, THREE.Material>();
     const skeletons = new Set<THREE.Skeleton>(), clothing = new Set<THREE.Material>();
     const sharedSkeletons = new Map<THREE.Bone, THREE.Skeleton>();
@@ -82,6 +85,7 @@ export class CharacterAssets {
         skeletons.add(object.skeleton);
       }
     });
+    const releaseSwimwear = swimwear ? addSwimwear(root, skin, shirt) : undefined;
     // Normalize only the instance root; the registered source geometry remains immutable.
     root.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(root), size = bounds.getSize(new THREE.Vector3());
@@ -90,7 +94,7 @@ export class CharacterAssets {
     let released = false;
     return { root, clips: entry.data.animations, dispose: () => {
       if (released) return; released = true; entry.refs--;
-      skeletons.forEach(skeleton => skeleton.dispose()); materials.forEach(material => material.dispose());
+      releaseSwimwear?.(); skeletons.forEach(skeleton => skeleton.dispose()); materials.forEach(material => material.dispose());
       geometries.forEach(geometry => geometry.dispose());
       root.removeFromParent(); root.clear();
     } };

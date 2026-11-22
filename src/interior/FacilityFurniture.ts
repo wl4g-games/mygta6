@@ -68,12 +68,7 @@ export function facilityFurniture(kind: StoreKind, box: PlaceFurniture): boolean
     return true;
   }
   if (kind === 'bank') {
-    for (const x of [-8, -2]) {
-      box('#657d77', x, 1.2, 5, 2.6, 2.4, 2);
-      box('#29454f', x, 1.6, 6.05, 1.6, .9, .08, false);
-      box('#d7d5bd', x, .95, 6.12, .9, .08, .3, false);
-      box('#435f55', x, .7, 6.13, 1.4, .1, .08, false);
-    }
+
     box('#a1a997', -5, .65, -5, 10, .2, 1.7);
     return true;
   }

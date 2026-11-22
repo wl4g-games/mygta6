@@ -4,6 +4,7 @@ import type { SandboxState } from '../core/Sandbox';
 import { WORLD } from '../config/game';
 import { weaponDefinition } from '../combat/WeaponCatalog';
 import type { WeatherType } from '../render/Weather';
+import { validateWorldExtras } from './WorldExtras';
 export interface GameSave {
   version: 4; seed: number; savedAt: number;
   player: { x: number; y: number; z: number; yaw: number };
@@ -55,6 +56,7 @@ export function migrateSave(raw: unknown): GameSave {
     || !Number.isFinite(save.sandbox.searchTime) || save.sandbox.searchTime < 0
     || save.world.garage && Object.values(save.world.garage).some(car => !Number.isFinite(car.fuel) || car.fuel < 0 || car.fuel > 100
       || !Number.isFinite(car.health) || car.health < 0 || car.health > 100 || typeof car.definitionId !== 'string' || typeof car.color !== 'string')) throw new Error('Damaged save data');
+  if (!validateWorldExtras(save.world)) throw new Error('Damaged save data');
   return save;
 }
 

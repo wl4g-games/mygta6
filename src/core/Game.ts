@@ -35,6 +35,13 @@ import { TaxiMission } from '../missions/TaxiMission';
 import { CarriedItem } from '../character/CarriedItem';
 import { preloadCoreAssets } from '../assets/Bootstrap';
 import { VehicleLighting } from '../render/VehicleLighting';
+import { Destructibles } from '../combat/Destructibles';
+import { PhoneService } from '../phone/PhoneService';
+import { DialogueSpeech } from '../audio/DialogueSpeech';
+import { RideHailing } from '../missions/RideHailing';
+import { PhoneProp } from '../character/PhoneProp';
+import { canReachVehicle } from '../vehicle/VehicleAccess';
+import { inspectCockpit } from '../vehicle/CockpitInspection';
 
 export class Game {
   readonly preferences = new Preferences(browserSettingsStorage());
@@ -55,6 +62,10 @@ export class Game {
   readonly vehicleLighting = new VehicleLighting(this.render.scene);
   readonly equipmentView = new EquippedWeapon(this.render.scene, this.assets);
   readonly carriedItem = new CarriedItem(this.assets, this.render.scene);
+  readonly phoneProp = new PhoneProp(this.render.scene);
+  readonly destructibles = new Destructibles(this.physics);
+  readonly phone = new PhoneService(this.state, this.events);
+  readonly speech = new DialogueSpeech();
   streaming!: StreamingManager;
   player!: Player;
   vehicle!: Vehicle;
@@ -62,6 +73,7 @@ export class Game {
   life!: CityLife;
   sandbox!: Sandbox;
   taxi!: TaxiMission;
+  hailing!: RideHailing;
   private services!: FacilityServices;
   private vehicleShop!: VehicleShop;
   private saved: GameSave | null = null;
@@ -76,10 +88,11 @@ export class Game {
   private saveAvailable = true;
   private physicsTicks = 0;
   private initialReady = false;
+  private cameraFreeUntil = 0;
   private readonly activePosition = new THREE.Vector3(WORLD.spawn.x, WORLD.spawn.y, WORLD.spawn.z);
   constructor() {
     this.ui.bind({ start: fresh => this.start(fresh), save: () => { void this.save(); },
-      quality: quality => { this.preferences.quality(quality); this.setQuality(quality); }, volume: volume => { this.audio.volume = volume; this.preferences.volume(volume); },
+      quality: quality => { this.preferences.quality(quality); this.setQuality(quality); }, volume: volume => { this.audio.volume = volume; this.speech.volume = volume; this.preferences.volume(volume); },
       bindKey: (logical, physical) => { const ok = this.preferences.bind(logical, physical); this.input.bindings = this.preferences.state.bindings; return ok; },
       resetKeys: () => { this.preferences.resetKeys(); this.input.bindings = this.preferences.state.bindings; },
       buy: id => this.buy(id), consume: id => { if (this.economy.consume(id)) { this.openInventory(); void this.save(true); } },
@@ -96,10 +109,14 @@ export class Game {
       ride: () => this.requestRide(),
       close: () => this.input.release(), resume: () => this.render.renderer.domElement.focus({ preventScroll: true }) }, this.preferences.state);
     this.input.bindings = this.preferences.state.bindings; this.audio.volume = this.preferences.state.volume;
+    this.speech.volume = this.audio.volume;
     this.map.onWaypoint = point => { this.state.delta.waypoint = { ...point }; void this.save(true); };
-    this.input.onLook = (dx, dy) => { if (!this.ui.blocked) { this.render.yaw -= dx * .003; this.render.pitch = THREE.MathUtils.clamp(this.render.pitch + dy * .003, -.6, 1.15); } };
+    this.input.onLook = (dx, dy) => { if (this.running && !this.ui.blocked) { this.cameraFreeUntil = performance.now() + 2500; this.render.yaw -= dx * .003; this.render.pitch = THREE.MathUtils.clamp(this.render.pitch + dy * .003, -.6, 1.15); } };
     this.input.onClick = () => { if (this.running && !this.ui.blocked) this.attack(); };
     this.events.on('toast', message => this.ui.toast(message));
+    this.events.on('phoneChanged', () => { if (this.phone.state.call?.status === 'ended') this.speech.stop(); void this.save(true); });
+    this.events.on('worldChanged', () => { void this.save(true); });
+    this.events.on('speak', ({ text }) => this.speech.say(text));
     this.events.on('purchase', () => { this.audio.chime(); this.sandbox.mission = Math.max(this.sandbox.mission, 2); void this.save(true); });
     this.events.on('consume', () => { this.sandbox.mission = Math.max(this.sandbox.mission, 3); this.ui.toast('补给已使用 · 生命恢复'); });
     this.events.on('policeEntry', ({ x, z }) => this.stores.openForPolice(x, z));
@@ -138,10 +155,12 @@ export class Game {
         this.vehicle.exit(); this.vehicle.restore({ x: store.x, y: vehicleMetrics(definition).rideHeight + .18, z: store.z + 20.3,
           yaw: -Math.PI / 2, fuel: state.fuel, health: state.health, definitionId: definition.id, color: state.color });
       });
-      this.stores = new StoreManager(this.render.scene, this.assets, this.physics, store => !store.archetype.requiredFlag || !!this.state.delta.flags[store.archetype.requiredFlag]);
+      this.stores = new StoreManager(this.render.scene, this.assets, this.physics, store => !store.archetype.requiredFlag || !!this.state.delta.flags[store.archetype.requiredFlag],
+        { world: this.state, economy: this.economy, events: this.events, destructibles: this.destructibles });
       this.life = new CityLife(this.render.scene, this.assets, this.physics);
-      this.sandbox = new Sandbox(this.events, this.assets, this.render.scene, this.economy, this.state, this.life, this.physics);
+      this.sandbox = new Sandbox(this.events, this.assets, this.render.scene, this.economy, this.state, this.life, this.physics, this.destructibles);
       this.taxi = new TaxiMission(this.state, this.economy, this.events, this.assets, this.render.scene, this.physics);
+      this.hailing = new RideHailing(this.state, this.economy, this.events, this.assets, this.render.scene, this.physics);
       this.services = new FacilityServices(this.economy, this.state, {
         vehicleNearby: () => this.vehicle.position.distanceTo(this.player.position) < 55,
         refuel: () => { this.vehicle.fuel = 100; }, repair: () => { this.vehicle.health = 100; }, repaint: () => this.vehicle.repaint('#a49375'),
@@ -150,7 +169,7 @@ export class Game {
         cinema: () => { this.render.time = (this.render.time + 2) % 24; queueMicrotask(() => { if (!this.closed) this.ui.screening(); }); },
         arcade: () => queueMicrotask(() => { if (!this.closed) this.ui.arcade(amount => { this.economy.state.cash += amount; void this.save(true); }); }),
       });
-      this.sandbox.onArrest = () => { this.taxi.cancel(this.vehicle); this.vehicle.exit(); this.player.setEnabled(true); this.player.teleport(WORLD.spawn.x, WORLD.spawn.y, WORLD.spawn.z); void this.save(true); };
+      this.sandbox.onArrest = () => { this.hailing.exit(); this.taxi.cancel(this.vehicle); this.vehicle.exit(); this.player.setEnabled(true); this.player.teleport(WORLD.spawn.x, WORLD.spawn.y, WORLD.spawn.z); void this.save(true); };
       const query = new URLSearchParams(location.search);
       if (query.get('quality') === 'low') this.preferences.state.quality = 'low';
       this.setQuality(this.preferences.state.quality);
@@ -176,6 +195,7 @@ export class Game {
       if (save.world.flags['vehicle:sand'] && !save.vehicle.color) this.vehicle.repaint('#a49375');
       if (save.world.flags['fitness:trained']) this.player.sprintSpeed = 8.8;
       if (save.driving) { this.vehicle.enter(this.player.appearance); this.player.setEnabled(false); }
+      this.hailing.restore(); if (this.hailing.riding) this.player.setEnabled(false);
       this.activePosition.copy(save.driving ? this.vehicle.position : this.player.position);
       this.sandbox.restore(save.sandbox, this.activePosition);
     }
@@ -186,15 +206,22 @@ export class Game {
     if (this.closed) return;
     const dt = this.lastTime ? Math.min((time - this.lastTime) / 1000, .1) : WORLD.fixedStep;
     this.lastTime = time;
-    const driving = this.vehicle.driving;
-    this.activePosition.copy(driving ? this.vehicle.position : this.player.position);
-    this.streaming.update(dt, this.activePosition, driving ? this.vehicle.velocity : this.player.velocity);
+    let viewedVehicle = this.hailing.riding ? this.hailing.vehicle! : this.vehicle, driving = this.vehicle.driving || this.hailing.riding;
+    this.activePosition.copy(driving ? viewedVehicle.position : this.player.position);
+    this.streaming.update(dt, this.activePosition, driving ? viewedVehicle.velocity : this.player.velocity);
     this.ui.setStreaming(this.running && !this.streaming.ready(this.activePosition.x, this.activePosition.z));
     this.stores.update(dt, this.activePosition, this.streaming, this.render.time);
     if (!this.initialReady && this.streaming.ready(WORLD.spawn.x, WORLD.spawn.z)) { this.initialReady = true; this.ui.ready(!!this.saved); }
     if (this.running) this.handleKeys();
     else if (this.input.take('Escape') && this.ui.modalOpen) this.ui.close();
+    viewedVehicle = this.hailing.riding ? this.hailing.vehicle! : this.vehicle; driving = this.vehicle.driving || this.hailing.riding;
     const simulate = this.running && !this.ui.blocked;
+    if (this.running) { this.phone.update(dt); this.ui.phoneScreen?.sync(); }
+    if (simulate) {
+      const horizontal = Number(this.input.held('ArrowLeft')) - Number(this.input.held('ArrowRight'));
+      const vertical = Number(this.input.held('ArrowDown')) - Number(this.input.held('ArrowUp'));
+      if (horizontal || vertical) { this.cameraFreeUntil = time + 2500; this.render.yaw += horizontal * dt * 1.6; this.render.pitch = THREE.MathUtils.clamp(this.render.pitch + vertical * dt, -.6, 1.15); }
+    }
     this.player.model.armed = this.sandbox.equipped;
     if (this.sandbox.equipped && !driving) this.player.model.group.rotation.y = this.render.yaw;
     if (simulate) {
@@ -202,17 +229,20 @@ export class Game {
       this.accumulator += dt;
       let steps = 0;
       while (this.accumulator >= WORLD.fixedStep && steps++ < 5) {
-        if (this.vehicle.driving) {
+        this.hailing.update(WORLD.fixedStep, this.streaming, this.life.signals);
+        if (this.hailing.riding) this.player.teleport(this.hailing.vehicle!.position.x, this.hailing.vehicle!.position.y + .4, this.hailing.vehicle!.position.z);
+        else if (this.vehicle.driving) {
           this.vehicle.readInput(this.input); this.vehicle.update(WORLD.fixedStep, this.streaming);
           this.player.teleport(this.vehicle.position.x, this.vehicle.position.y + .4, this.vehicle.position.z);
         } else this.player.control(WORLD.fixedStep, this.input, this.render.yaw, this.streaming);
         this.vehicle.body.setEnabled(this.streaming.ready(this.vehicle.position.x, this.vehicle.position.z));
-        const actorPosition = this.vehicle.driving ? this.vehicle.position : this.player.position;
+        const actorPosition = this.hailing.riding ? this.hailing.vehicle!.position : this.vehicle.driving ? this.vehicle.position : this.player.position;
         this.life.update(WORLD.fixedStep, actorPosition, this.streaming, this.render.time > 21 || this.render.time < 6);
         this.taxi.update(WORLD.fixedStep, actorPosition, this.vehicle, this.streaming);
         this.sandbox.update(WORLD.fixedStep, actorPosition, driving ? this.vehicle.speed : this.player.velocity.length(), !!this.stores.current, this.streaming);
         if (this.streaming.ready(this.activePosition.x, this.activePosition.z)) { this.physics.step(); this.physicsTicks++; }
         this.player.sync(WORLD.fixedStep); this.vehicle.sync(WORLD.fixedStep);
+        this.hailing.vehicle?.sync(WORLD.fixedStep);
         this.accumulator -= WORLD.fixedStep;
       }
       if (steps > 5) this.accumulator = 0;
@@ -231,24 +261,41 @@ export class Game {
         this.accumulator -= WORLD.fixedStep;
       }
     }
-    if (this.vehicle.driving && !this.input.held('AltLeft') && simulate) {
+    viewedVehicle = this.hailing.riding ? this.hailing.vehicle! : this.vehicle; driving = this.vehicle.driving || this.hailing.riding;
+    if (this.running) this.activePosition.copy(driving ? viewedVehicle.position : this.player.position);
+    this.life.render(simulate || !this.running ? dt : 0);
+    if (driving && !this.render.firstPerson && !this.input.held('AltLeft') && simulate && time > this.cameraFreeUntil) {
       // Camera follows road direction, while right-drag remains available for looking around.
-      const delta = THREE.MathUtils.euclideanModulo(this.vehicle.yaw - this.render.yaw + Math.PI, Math.PI * 2) - Math.PI;
+      const delta = THREE.MathUtils.euclideanModulo(viewedVehicle.yaw - this.render.yaw + Math.PI, Math.PI * 2) - Math.PI;
       this.render.yaw += delta * dt * .9;
     }
-    this.player.model.group.visible = !this.vehicle.driving && !this.render.firstPerson;
+    this.player.model.group.visible = !driving && (!this.render.firstPerson || !!this.ui.phoneScreen);
+    this.player.model.onlyArms(this.render.firstPerson && !!this.ui.phoneScreen);
     this.vehicle.firstPerson(this.render.firstPerson);
+    this.hailing.vehicle?.firstPerson(this.render.firstPerson, this.hailing.riding);
     this.render.weather = this.weather.type; this.assets.setWetness(this.weather.precipitation ? 1 : 0);
-    this.render.update(dt, this.activePosition, this.vehicle.driving, this.physics, driving ? this.vehicle.body : this.player.body, !this.running, simulate || !this.running, this.vehicle.cameraView);
+    this.render.update(dt, this.activePosition, driving, this.physics, driving ? viewedVehicle.body : this.player.body, !this.running, simulate || !this.running,
+      this.hailing.riding ? { ...viewedVehicle.cameraView, x: -viewedVehicle.cameraView.x } : viewedVehicle.cameraView);
     this.assets.setRenderOrigin(this.render.origin.offset);
     this.assets.setEnvironment(simulate ? dt : 0, 1 - THREE.MathUtils.smoothstep(Math.sin((this.render.time - 6) / 12 * Math.PI), -.05, .25));
     this.equipmentView.update(this.sandbox.arsenal.state.selected, this.player.model, this.render.camera, this.render.origin.offset, this.render.firstPerson, this.running && !driving);
     this.carriedItem.update(this.basket[0], this.player.model, this.render.camera, this.render.origin.offset, this.render.firstPerson, this.running && !driving && !this.sandbox.equipped);
+    const phoneGrip = this.ui.phoneScreen ? new THREE.Vector3(-.16, -.23, -.4).applyQuaternion(this.render.camera.quaternion).add(this.render.camera.position).add(this.render.origin.offset) : undefined;
+    this.vehicle.animateOccupants(dt, !this.hailing.riding ? phoneGrip : undefined);
+    this.hailing.vehicle?.animateOccupants(dt, this.hailing.riding ? phoneGrip : undefined, this.hailing.riding);
+    if (this.ui.phoneScreen && !driving) { this.player.model.animate(dt, 0); this.player.model.reach('left', this.render.firstPerson ? phoneGrip! : this.player.model.group.localToWorld(new THREE.Vector3(-.2, 1.25, -.35))); }
+    const phoneHolder = driving ? (this.hailing.riding ? viewedVehicle.passengerHolder : viewedVehicle.holder) ?? this.player.model : this.player.model;
+    const dock = driving && this.state.delta.flags['owns:phone'] && !this.ui.phoneScreen ? {
+      position: viewedVehicle.group.localToWorld(new THREE.Vector3(0, viewedVehicle.cameraView.eye - .22, viewedVehicle.cameraView.z - .6)),
+      quaternion: viewedVehicle.group.getWorldQuaternion(new THREE.Quaternion()), map: this.ui.map, label: this.map.waypoint ? 'GPS · 已设置目的地' : 'PORT AZURE · 城市地图',
+    } : undefined;
+    this.phoneProp.update(this.ui.phoneScreen, phoneHolder, this.render.camera, this.render.origin.offset, this.render.firstPerson, dock);
     this.assets.setSignals(this.life.signals);
     this.cityLighting.update(this.render.time, this.activePosition, this.streaming, this.render.yaw);
     this.vehicleLighting.update(this.render.time, this.vehicle.position, this.vehicle.yaw, this.vehicle.definition, this.vehicle.driving, this.vehicle.health);
     this.audio.update(this.vehicle.speed, this.vehicle.driving, !simulate, { inside: !!this.stores.current, rain: this.weather.precipitation,
       walking: this.player.movementSpeed, swimming: this.player.swimming, bar: this.stores.current?.archetype.kind === 'bar', wanted: this.sandbox.wanted,
+      stage: this.stores.current?.archetype.kind === 'bar' ? { x: this.stores.current.x, y: 1.6, z: this.stores.current.z - 9 } : undefined,
       listener: this.activePosition, yaw: this.render.yaw, police: this.sandbox.policePosition });
     this.uiTime += dt;
     if (this.uiTime > .12) { this.uiTime = 0; this.updateHUD(); }
@@ -266,8 +313,13 @@ export class Game {
     if (this.input.take('KeyP')) this.openDirectory('phone');
     if (this.input.take('KeyG')) this.openDirectory('guide');
     if (this.input.take('KeyV')) this.render.firstPerson = !this.render.firstPerson;
-    if (this.input.take('KeyL')) void this.render.renderer.domElement.requestPointerLock();
-    if (this.input.take('KeyF')) { if (this.vehicle.driving) this.exitVehicle(); else if (this.player.position.distanceTo(this.vehicle.position) < 5.8) { this.vehicle.enter(this.player.appearance); this.player.setEnabled(false); this.render.yaw = this.vehicle.yaw; this.ui.toast('W / S 油门与倒车 · A / D 转向 · SPACE 手刹 · F 下车'); } }
+    if (this.input.take('KeyL')) this.input.lockPointer();
+    if (this.input.take('KeyF')) {
+      if (this.hailing.riding) this.exitVehicle(this.hailing.vehicle!);
+      else if (this.vehicle.driving) this.exitVehicle();
+      else if (this.hailing.board(this.player.position)) { this.player.setEnabled(false); this.render.yaw = this.hailing.vehicle!.yaw; this.render.pitch = .05; this.ui.close(); void this.save(true); }
+      else this.enterVehicle();
+    }
     if (this.input.take('KeyE')) {
       if (!this.vehicle.driving) this.interact();
       else if (this.taxi.interact(this.vehicle, this.sandbox.wanted)) void this.save(true);
@@ -282,7 +334,16 @@ export class Game {
   private interact() {
     const action = this.stores.action;
     if (action) {
-      if (action.type === 'door') { if (!this.stores.toggleDoor(action.store.id)) this.ui.toast(action.store.archetype.requiredFlag ? '公寓上锁 · 先到 COVE LIVING 租房，取得钥匙后可在屋内休息存档' : '店铺已打烊 · 门口标牌显示营业时间，可在酒店休息等待开门'); }
+      if (action.type === 'door') {
+        if (!this.stores.toggleDoor(action.store.id, true)) this.ui.toast(action.store.archetype.requiredFlag ? '公寓上锁 · 先到 COVE LIVING 租房，取得钥匙后可在屋内休息存档' : '店铺已打烊 · 门口标牌显示营业时间，可在酒店休息等待开门');
+        else {
+          const { x, z } = action.store, inside = this.stores.current?.id === action.store.id;
+          this.player.approach(inside ? [{ x, z: z + 10.5 }, { x, z: z + 15.5 }] : [{ x, z: z + 15.5 }, { x, z: z + 10.5 }]);
+          this.ui.toast('正在穿过店门 · A / D / S 可取消走位，进店后自由行走');
+        }
+      }
+      else if (action.type === 'club') { const message = this.stores.clubDialogue(action.store.id, action.guest!); this.ui.dialogue(action.guest!, message); this.events.emit('speak', { text: message }); }
+      else if (action.type === 'atm') { if (this.stores.interactATM(action.store.id, action.machine!)) this.ui.shop(action.store, this.economy, false, [], [], undefined, true); }
       else if (action.type === 'fridge') { this.stores.toggleFridge(action.store.id); this.ui.toast('冷藏柜已打开 · 货架上可查看并选择饮料'); }
       else if (action.type === 'talk') {
         if (action.guest) { this.ui.dialogue(`顾客 · ${action.guest}`, '这座城市最舒服的地方，就是可以坐下来慢慢喝杯咖啡。海湾的黄昏很好看，你也可以试试社区接送，认识更多邻居。'); return; }
@@ -304,7 +365,7 @@ export class Game {
     }
   }
   private attack() {
-    if (this.vehicle.driving) return;
+    if (this.vehicle.driving || this.hailing.riding) return;
     let direction = new THREE.Vector3(-Math.sin(this.render.yaw), 0, -Math.cos(this.render.yaw));
     if (this.sandbox.equipped) {
       const from = this.render.camera.position.clone().add(this.render.origin.offset), look = this.render.camera.getWorldDirection(new THREE.Vector3()), range = this.sandbox.arsenal.selected!.range;
@@ -346,9 +407,20 @@ export class Game {
   private openDirectory(kind: 'phone' | 'guide') {
     const required = kind === 'phone' ? 'owns:phone' : 'owns:city-guide';
     if (!this.state.delta.flags[required]) { this.ui.toast(kind === 'phone' ? '请先在 SIGNAL 电子商店购买手机' : '请先在 CHAPTER ONE 书店购买指南'); return; }
-    const profile = kind === 'phone' ? `现金 $${this.economy.state.cash} · 银行 $${this.economy.state.bank} · ${this.weather.type.toUpperCase()} · 社区送货${this.delivery.active ? '进行中' : this.delivery.complete ? '已完成' : '尚未接取'}` : '从海湾到商业区，发现属于你的城市日常。';
-    this.ui.directory(nearbyPlaces(this.activePosition.x, this.activePosition.z), kind === 'phone' ? 'SIGNAL · 城市手机' : 'Port Azure · 城市指南', profile,
-      kind === 'phone' ? { active: this.taxi.active } : undefined, this.render.time);
+    if (kind === 'phone') { this.openPhone(); return; }
+    const profile = '从海湾到商业区，发现属于你的城市日常。';
+    this.ui.directory(nearbyPlaces(this.activePosition.x, this.activePosition.z), 'Port Azure · 城市指南', profile, undefined, this.render.time);
+  }
+  private openPhone() {
+    const places = nearbyPlaces(this.activePosition.x, this.activePosition.z);
+    this.ui.phone(this.phone, { places, volume: () => this.audio.volume, profile: () => ({ cash: this.economy.state.cash, bank: this.economy.state.bank, time: `${Math.floor(this.render.time)}:${String(Math.floor(this.render.time % 1 * 60)).padStart(2, '0')}` }),
+      navigate: id => { const store = places.find(place => place.store.id === id)?.store; if (store) { this.map.setWaypoint({ x: store.x, z: store.z + 15 }); this.ui.close(); } },
+      driverJob: () => this.requestRide(), jobActive: () => this.taxi.active,
+      requestRide: id => {
+        if (this.vehicle.driving || this.sandbox.wanted || this.taxi.active) { this.ui.toast('请先下车，并结束通缉或接送任务，再叫车'); return; }
+        const store = places.find(place => place.store.id === id)?.store;
+        if (store && this.hailing.request(this.player.position, store)) this.ui.close();
+      }, cancelRide: () => this.hailing.cancel(), rideStatus: () => this.hailing.status });
   }
   private requestRide() {
     if (this.taxi.active) this.taxi.cancel(this.vehicle);
@@ -356,25 +428,44 @@ export class Game {
     else this.taxi.accept(this.activePosition);
     this.ui.close(); void this.save(true);
   }
-  private exitVehicle() {
-    if (this.vehicle.speed > 4) { this.ui.toast('请先减速停车，再下车'); return; }
-    const p = this.vehicle.position, yaw = this.vehicle.yaw;
+  private enterVehicle() {
+    const nearby = this.life.nearestVehicle(this.player.position), ownDistance = this.player.position.distanceTo(this.vehicle.position);
+    if (nearby && (ownDistance >= 5.8 || nearby.car.model.position.distanceTo(this.player.position) < ownDistance)) {
+      if (this.taxi.active) this.taxi.cancel(this.vehicle);
+      const claimed = this.life.claimVehicle(this.player.position); if (!claimed) return;
+      this.vehicle.restore(claimed);
+      this.events.emit('crime', { severity: claimed.occupied ? 2 : 1, x: claimed.x, z: claimed.z });
+      this.ui.toast(claimed.occupied ? '司机已离车逃跑 · 车辆劫持已报警 · F 下车' : '已进入街边车辆 · 盗车已报警 · F 下车');
+    } else if (ownDistance >= 5.8) { this.ui.toast('请靠近车门，再按 F 上车'); return; }
+    else if (!canReachVehicle(this.physics, this.player.position, this.vehicle.body)) { this.ui.toast('车门被障碍物挡住，请走到车身旁再按 F'); return; }
+    else this.ui.toast('W / S 油门与倒车 · A / D 转向 · SPACE 手刹 · F 下车');
+    this.vehicle.enter(this.player.appearance); this.player.setEnabled(false); this.render.yaw = this.vehicle.yaw; void this.save(true);
+  }
+  private exitVehicle(vehicle = this.vehicle) {
+    if (vehicle.speed > 4) { if (this.hailing.riding) { this.hailing.requestStop(); this.ui.toast('司机正在停车，请稍后再按 F 下车'); } else this.ui.toast('请先减速停车，再下车'); return; }
+    const p = vehicle.position, yaw = vehicle.yaw;
     const candidates = [1, -1].flatMap(side => {
       const x = p.x + Math.cos(yaw) * side * 2.2, z = p.z - Math.sin(yaw) * side * 2.2;
-      const height = this.physics.groundHeight(x, z, p.y + 2.5, this.vehicle.body);
+      const height = this.physics.groundHeight(x, z, p.y + 2.5, vehicle.body);
       return height === null || height > p.y + .8 ? [] : [{ x, y: height + 1.04, z }];
     });
-    const candidate = candidates.find(c => this.physics.canStand(c, this.vehicle.body) && !this.physics.blocked({ x: p.x, y: p.y + .5, z: p.z }, { ...c, y: p.y + .5 }, this.vehicle.body));
+    const candidate = candidates.find(c => this.physics.canStand(c, vehicle.body) && !this.physics.blocked({ x: p.x, y: p.y + .5, z: p.z }, { ...c, y: p.y + .5 }, vehicle.body));
     if (!candidate) { this.ui.toast('车门旁空间不足，请换一个停车位置'); return; }
-    this.vehicle.exit(); this.player.setEnabled(true); this.player.teleport(candidate.x, candidate.y, candidate.z);
+    if (vehicle === this.hailing.vehicle) this.hailing.exit(); else vehicle.exit();
+    this.player.setEnabled(true); this.player.teleport(candidate.x, candidate.y, candidate.z);
+    void this.save(true);
   }
   private updateHUD() {
     const pos = this.activePosition, chunk = chunkAt(pos.x, pos.z);
+    const view = this.hailing.riding ? this.hailing.vehicle! : this.vehicle, inVehicle = this.vehicle.driving || this.hailing.riding;
     const district = generateChunk(this.streaming.seed, `${chunk.x},${chunk.z}`).district;
     let prompt = '', promptKey = 'E';
-    if (!this.vehicle.driving) {
-      if (this.stores.action) prompt = this.stores.action.label;
+    if (this.hailing.riding) { prompt = 'Azure Ride · 抵达后下车 / 请求停车'; promptKey = 'F'; }
+    else if (!this.vehicle.driving) {
+      if (this.hailing.canBoard(this.player.position)) { prompt = 'Azure Ride · 作为乘客上车'; promptKey = 'F'; }
+      else if (this.stores.action) prompt = this.stores.action.label;
       else if (this.player.position.distanceTo(this.vehicle.position) < 5.8) { prompt = `Drive ${this.vehicle.definition.name} · 驾驶`; promptKey = 'F'; }
+      else if (this.life.nearestVehicle(this.player.position)) { prompt = '进入车辆 / 拉下司机 · 将引起警方注意'; promptKey = 'F'; }
       else if (this.life.nearest(this.player.position)) prompt = 'Talk to a neighbor · 与路人交谈';
     } else prompt = this.taxi.action(this.vehicle, this.sandbox.wanted);
     const missions = [
@@ -384,17 +475,17 @@ export class Game {
       ['The city is yours', '走到街边的青色轿车旁，按 F 上车并驾驶 80 米。'],
       ['Find your own way', '任务完成。探索商铺、海湾和城市生活。按 M 设置导航。'],
     ];
-    const mission = this.taxi.active ? ['Neighborhood rides', this.taxi.riding ? `乘客已上车 · 实际行驶 ${Math.floor(this.taxi.data.meters)} m。到 GPS 目的地停车按 E 结算。` : '开车到 GPS 标记处停车，按 E 接上路边乘客；摩托车无法接送。']
+    const mission = this.hailing.data && this.hailing.data.stage !== 'arrived' ? ['Azure Ride', this.hailing.status.text] : this.taxi.active ? ['Neighborhood rides', this.taxi.riding ? `乘客已上车 · 实际行驶 ${Math.floor(this.taxi.data.meters)} m。到 GPS 目的地停车按 E 结算。` : '开车到 GPS 标记处停车，按 E 接上路边乘客；摩托车无法接送。']
       : this.delivery.active ? ['Neighborhood delivery', '将社区包裹送到东侧 Sunset Diner，与店员交谈。奖励 $85。'] : missions[Math.min(4, this.sandbox.mission)];
     const stats = this.streaming.stats, info = this.render.renderer.info, assets = this.assets.stats;
     const time = `${String(Math.floor(this.render.time)).padStart(2, '0')}:${String(Math.floor(this.render.time % 1 * 60)).padStart(2, '0')}`;
-    this.ui.update({ cash: this.economy.state.cash, health: this.economy.state.health, time, district, speed: this.vehicle.speed, fuel: this.vehicle.fuel,
-      driving: this.vehicle.driving, vehicleName: this.vehicle.definition.name, vehicleHealth: this.vehicle.health, prompt, promptKey: keyLabel(this.input.bindings[`Key${promptKey}`] ?? promptKey), objective: mission[0], objectiveDetail: mission[1], wanted: this.sandbox.wanted,
+    this.ui.update({ cash: this.economy.state.cash, health: this.economy.state.health, time, district, speed: view.speed, fuel: view.fuel,
+      driving: inVehicle, vehicleName: this.hailing.riding ? 'Azure Ride · 乘客' : view.definition.name, vehicleHealth: view.health, prompt, promptKey: keyLabel(this.input.bindings[`Key${promptKey}`] ?? promptKey), objective: mission[0], objectiveDetail: mission[1], wanted: this.sandbox.wanted,
       location: this.stores.current?.archetype.name ?? district.toUpperCase(), fps: this.render.fps, calls: info.render.calls, triangles: info.render.triangles,
       chunks: `${stats.ACTIVE} ACTIVE · ${stats.NEAR} NEAR · ${stats.FAR} FAR`, pending: stats.pending, physics: this.physics.lastStepMs,
       resources: `GPU est. ${stats.memoryMB.toFixed(1)} MB · ${info.memory.geometries} geo · ${info.memory.textures} tex · ${assets.references} refs`, ratio: this.render.ratio,
       equipment: this.sandbox.arsenal.selected ? `${this.sandbox.arsenal.selected.name} · ${this.sandbox.arsenal.reloading ? '换弹中…' : `${this.sandbox.arsenal.stock!.clip} / ${this.sandbox.arsenal.stock!.reserve}`} · T RELOAD` : '' });
-    this.ui.setWeather(this.weather.type.toUpperCase()); this.map.draw(this.ui.map, pos, this.vehicle.driving ? this.vehicle.yaw : this.render.yaw);
+    this.ui.setWeather(this.weather.type.toUpperCase()); this.map.draw(this.ui.map, pos, inVehicle ? view.yaw : this.render.yaw);
   }
   private setQuality(value: Quality) { this.render.setQuality(value); this.cityLighting.setQuality(value); this.vehicleLighting.setQuality(value); if (this.streaming) this.streaming.radius = QUALITY[value].radius; }
   async save(quiet = false) {
@@ -412,12 +503,18 @@ export class Game {
     return { ready: this.initialReady, running: this.running, position: this.player.position.toArray(), vehicle: this.vehicle.position.toArray(),
       cash: this.economy.state.cash, bank: this.economy.state.bank, health: this.economy.state.health, inventory: { ...this.economy.state.inventory }, flags: { ...this.state.delta.flags },
       driving: this.vehicle.driving, speed: this.vehicle.speed, fuel: this.vehicle.fuel, store: this.stores.current?.id ?? null,
+      camera: { yaw: this.render.yaw, pitch: this.render.pitch, position: this.render.camera.position.clone().add(this.render.origin.offset).toArray() },
       action: this.stores.action?.type, chunks: this.streaming.stats, interiors: this.stores.count, assets: this.assets.stats,
       physicsTicks: this.physicsTicks, colliders: this.physics.world.colliders.len(), mission: this.sandbox.mission, wanted: this.sandbox.wanted,
       policeOnFoot: this.sandbox.policeOnFoot,
+      officerPosition: this.sandbox.officerPosition?.toArray(),
+      policeCar: this.sandbox.policePosition?.toArray(),
       equipment: this.sandbox.arsenal.serialize(),
       waypoint: this.map.waypoint,
       taxi: structuredClone(this.taxi.data),
+      phone: structuredClone(this.state.delta.phone), machines: structuredClone(this.state.delta.machines),
+      clubCast: this.stores.clubCast,
+      hailedRide: structuredClone(this.hailing.data), riding: this.hailing.riding, hailedVehicle: this.hailing.vehicle?.position.toArray(),
       equipmentPosition: this.equipmentView.position,
       carriedItem: { id: this.basket[0], position: this.carriedItem.position },
       grip: this.player.model.grip.getWorldPosition(new THREE.Vector3()).add(this.render.origin.offset).toArray(),
@@ -428,6 +525,7 @@ export class Game {
       vehicleColor: this.vehicle.color,
       vehicleHealth: this.vehicle.health,
       vehicleDetailed: !!this.vehicle.group.userData.detailedAsset,
+      drivingHands: this.vehicle.handDiagnostics, phoneVisible: this.phoneProp.root.visible,
       facadeTemplatesReady: this.assets.buildings.ready,
       vehicleYaw: this.vehicle.yaw,
       swimming: this.player.swimming,
@@ -451,7 +549,7 @@ export class Game {
       green: this.life.signals.x === 'green', groundReady: this.streaming.ready(vehicle.position.x, vehicle.position.z) };
   }
   private exposeTestAPI() {
-    Object.assign(window, { __city: { snapshot: () => this.snapshot(), driveSensor: (direction?: number) => this.driveSensor(direction), ao: (enabled: boolean) => this.render.debugAO(enabled), save: () => this.save(true),
+    Object.assign(window, { __city: { snapshot: () => this.snapshot(), lookAt: (x: number, y: number, z: number) => { const eye = this.player.position.clone().add(new THREE.Vector3(0, .8, 0)), delta = new THREE.Vector3(x, y, z).sub(eye); this.render.yaw = Math.atan2(-delta.x, -delta.z); this.render.pitch = -Math.atan2(delta.y, Math.hypot(delta.x, delta.z)); }, cockpit: () => { const result = inspectCockpit(this.hailing.riding ? this.hailing.vehicle! : this.vehicle, this.hailing.riding); result.eye = new THREE.Vector3().fromArray(result.eye).add(this.render.origin.offset).toArray(); return result; }, driveSensor: (direction?: number) => this.driveSensor(direction), ao: (enabled: boolean) => this.render.debugAO(enabled), save: () => this.save(true), recordAudio: () => this.audio.capture(),
       teleport: (x: number, z: number, yaw = 0) => { if (this.vehicle.driving) { this.vehicle.exit(); this.player.setEnabled(true); } this.player.teleport(x, 1.1, z); this.activePosition.copy(this.player.position); this.render.yaw = yaw; },
       vehicleTeleport: (x: number, z: number, yaw: number, y = 1) => {
         this.vehicle.restore({ x, y, z, yaw, fuel: 100, health: 100 }); this.vehicle.enter(this.player.appearance); this.player.setEnabled(false);
@@ -462,7 +560,7 @@ export class Game {
   close() {
     if (this.closed) return;
     this.closed = true; window.removeEventListener('pagehide', this.pageHide);
-    this.render.renderer.setAnimationLoop(null); this.taxi?.close(); this.sandbox?.close(); this.life?.close(); this.stores?.close(); this.streaming?.close();
-    this.carriedItem.close(); this.equipmentView.close(); this.player?.dispose(); this.vehicle?.dispose(); this.weather.close(); this.cityLighting.close(); this.vehicleLighting.close(); this.assets.close(); this.audio.close(); this.saves.close(); this.input.close(); this.physics.close(); this.render.close(); this.ui.dispose(); this.events.clear();
+    this.render.renderer.setAnimationLoop(null); this.hailing?.close(); this.taxi?.close(); this.sandbox?.close(); this.life?.close(); this.stores?.close(); this.streaming?.close();
+    this.speech.stop(); this.phoneProp.close(); this.destructibles.close(); this.carriedItem.close(); this.equipmentView.close(); this.player?.dispose(); this.vehicle?.dispose(); this.weather.close(); this.cityLighting.close(); this.vehicleLighting.close(); this.assets.close(); this.audio.close(); this.saves.close(); this.input.close(); this.physics.close(); this.render.close(); this.ui.dispose(); this.events.clear();
   }
 }

@@ -17,6 +17,7 @@ export class Player {
   private vertical = 0;
   private grounded = false;
   private speed = 0;
+  private approachPoints: { x: number; z: number }[] = [];
   sprintSpeed = 8;
   swimming = false;
   private shirtColor = '#ded7be';
@@ -31,14 +32,21 @@ export class Player {
   }
   control(dt: number, input: Input, yaw: number, streaming: StreamingManager) {
     if (!streaming.ready(this.position.x, this.position.z)) return;
-    let forward = Number(input.held('KeyW') || input.held('ArrowUp')) - Number(input.held('KeyS') || input.held('ArrowDown'));
+    let forward = Number(input.held('KeyW')) - Number(input.held('KeyS'));
     let side = Number(input.held('KeyD')) - Number(input.held('KeyA'));
     const length = Math.hypot(forward, side); if (length) { forward /= length; side /= length; }
     const crouch = input.held('ControlLeft') || input.held('KeyC');
     this.swimming = this.position.x < -192 && this.position.y < 1.15 && !isBridge(this.position.x, this.position.z);
     const targetSpeed = this.swimming ? input.held('ShiftLeft') ? 3.2 : 2.2 : input.held('ShiftLeft') ? this.sprintSpeed : crouch ? 2 : 4.4;
-    const vx = (-Math.sin(yaw) * forward + Math.cos(yaw) * side) * targetSpeed;
-    const vz = (-Math.cos(yaw) * forward - Math.sin(yaw) * side) * targetSpeed;
+    let vx = (-Math.sin(yaw) * forward + Math.cos(yaw) * side) * targetSpeed;
+    let vz = (-Math.cos(yaw) * forward - Math.sin(yaw) * side) * targetSpeed;
+    if (side || input.held('KeyS') || input.held('Space')) this.approachPoints = [];
+    while (this.approachPoints.length && Math.hypot(this.approachPoints[0].x - this.position.x, this.approachPoints[0].z - this.position.z) < .25) this.approachPoints.shift();
+    const approach = this.approachPoints[0];
+    if (approach) {
+      const dx = approach.x - this.position.x, dz = approach.z - this.position.z, distance = Math.hypot(dx, dz);
+      const speed = Math.min(3, distance * 5); vx = dx / distance * speed; vz = dz / distance * speed;
+    }
     this.velocity.x = THREE.MathUtils.damp(this.velocity.x, vx, 12, dt);
     this.velocity.z = THREE.MathUtils.damp(this.velocity.z, vz, 12, dt);
     if (input.take('Space') && (this.grounded || this.swimming)) this.vertical = 8;
@@ -65,10 +73,12 @@ export class Player {
     this.model.group.position.set(p.x, p.y - .98, p.z);
   }
   teleport(x: number, y: number, z: number) {
+    this.approachPoints = [];
     this.body.setTranslation({ x, y, z }, true); this.body.setNextKinematicTranslation({ x, y, z });
     this.velocity.set(0, 0, 0); this.vertical = 0; this.sync(0);
   }
-  setEnabled(enabled: boolean) { this.body.setEnabled(enabled); this.collider.setEnabled(enabled); this.model.group.visible = enabled; }
+  approach(points: { x: number; z: number }[]) { this.approachPoints = points.map(point => ({ ...point })); }
+  setEnabled(enabled: boolean) { this.approachPoints = []; this.body.setEnabled(enabled); this.collider.setEnabled(enabled); this.model.group.visible = enabled; }
   get appearance() { return { shirt: this.shirtColor, haircut: this.hairShort }; }
   get movementSpeed() { return this.speed; }
   setAppearance(color: string = this.shirtColor, haircut = this.hairShort) {
