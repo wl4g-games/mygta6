@@ -2,7 +2,7 @@ name: CI and GitHub Pages
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -62,7 +62,7 @@ jobs:
           name: production-smoke
           path: |
             artifacts/production-*.png
-            artifacts/production-smoke.json
+            artifacts/production-*.json
             /tmp/city-preview.log
           if-no-files-found: ignore
           retention-days: 7

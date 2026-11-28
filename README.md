@@ -28,7 +28,7 @@ HTTPS_PROXY=http://127.0.0.1:8800 pnpm install
 
 线上地址：[OpenWorld City](https://wl4g-games.github.io/mygta6/)。
 
-[CI and GitHub Pages](.github/workflows/pages.yml) 在 `dev` 推送和向 `main` 提交 PR 时验证；合入 `main` 后自动发布同一份验证过的 `dist/`。验证包含单元／集成测试、素材校验、生产构建与 Chromium 实际进店，另外检查 Worker、压缩纹理解码、模型、贴图和三段手机视频的子路径加载。只有验证成功才部署。也可从 Actions 页面手动运行 `main` 分支的工作流。仓库 Settings → Pages 的 Source 应为 **GitHub Actions**。
+[CI and GitHub Pages](.github/workflows/pages.yml) 在向 `main` 提交或更新 PR 时验证；合入 `main` 后自动发布同一份验证过的 `dist/`。验证包含单元／集成测试、素材校验、生产构建与 Chromium 实际进店，另外检查 Worker、压缩纹理解码、模型、贴图和三段手机视频的子路径加载。只有验证成功才部署。也可从 Actions 页面手动运行 `main` 分支的工作流。仓库 Settings → Pages 的 Source 应为 **GitHub Actions**。
 
 构建时用 Vite `base` 设置部署路径，所有运行时素材也共享这个路径；本地开发继续使用 `/`。模拟本站部署：
 
