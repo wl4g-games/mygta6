@@ -5,6 +5,7 @@
 - `pnpm build --base=/mygta6/`: typecheck and production build pass.
 - Production browser check at `http://127.0.0.1:4173/mygta6/`: start → E → actual convenience-store entry; 56 successful HTTP resource paths, no page / console / request errors, QA API absent. Character, vehicle, building, prop, surface, Basis WASM and world Worker requests stay under `/mygta6/`; all three phone videos decode. Report: `artifacts/production-smoke.json`.
 - The first Linux CI run started the game but missed store entry. The smoke now waits for the visible door interaction before sending E and retains failure screenshots/state. The revised path also passes locally with software rendering (`CITY_SOFTWARE_GPU=1`).
+- The second Linux run entered the store and decoded the videos without game errors; its software renderer timed out while capturing the diagnostic screenshot. Screenshots are now best-effort attachments, recorded separately in the result. Gameplay, resource, media and QA API assertions remain mandatory.
 - `.github/workflows/pages.yml` runs validation for PRs to `main` and pushes to `main`. Only successful non-PR `main` runs upload and deploy the verified bundle to GitHub Pages. This workflow also retains the production screenshot, report and preview-server log for seven days.
 
 The following gameplay and performance results are from the previous checkpoint; this deployment change does not rerun the full 38-case suite or long driving soak.

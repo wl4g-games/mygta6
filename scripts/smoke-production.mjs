@@ -52,9 +52,10 @@ try {
   for (const resource of ['characters/', 'vehicles/', 'city/', 'props/', 'surfaces/', 'basis/basis_transcoder.wasm', 'world.worker-']) {
     expect([...responses].some(path => path.includes(`${target.pathname}assets/${resource}`)), `Missing runtime resource: ${resource}`).toBe(true);
   }
-  await page.screenshot({ path: 'artifacts/production-convenience-entry.png' });
+  const screenshot = await page.screenshot({ path: 'artifacts/production-convenience-entry.png', timeout: 15000 })
+    .then(() => true, error => { console.warn(`Diagnostic screenshot unavailable: ${error.message}`); return false; });
   expect(errors).toEqual([]);
-  const result = { passed: true, url: target.href, enteredConvenienceStore: true, qaAPI: false, media: 3, resources: responses.size, errors };
+  const result = { passed: true, url: target.href, enteredConvenienceStore: true, qaAPI: false, media: 3, resources: responses.size, screenshot, errors };
   await writeFile('artifacts/production-smoke.json', JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
 } catch (error) {
