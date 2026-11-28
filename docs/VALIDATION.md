@@ -1,4 +1,14 @@
-# Current playable checkpoint — 2026-11-21
+# GitHub Pages deployment verification — 2026-11-28
+
+- `pnpm install --frozen-lockfile --offline`: pass with pnpm 10.6.1.
+- `pnpm test`: 80 tests / 27 files pass; `pnpm assets:verify`: 68 / 68 pinned assets pass.
+- `pnpm build --base=/mygta6/`: typecheck and production build pass.
+- Production browser check at `http://127.0.0.1:4173/mygta6/`: start → E → actual convenience-store entry; 56 successful HTTP resource paths, no page / console / request errors, QA API absent. Character, vehicle, building, prop, surface, Basis WASM and world Worker requests stay under `/mygta6/`; all three phone videos decode. Report: `artifacts/production-smoke.json`.
+- `.github/workflows/pages.yml` runs validation for `dev`, PRs to `main`, and `main`. Only successful non-PR `main` runs upload and deploy the verified bundle to GitHub Pages. This workflow also retains the production screenshot, report and preview-server log for seven days.
+
+The following gameplay and performance results are from the previous checkpoint; this deployment change does not rerun the full 38-case suite or long driving soak.
+
+# Previous playable checkpoint — 2026-11-21
 
 Platform: macOS Apple Silicon, Chromium 151, native ANGLE Metal, 1440 × 900 browser tests, one browser worker. Other host workloads were present. These observations cover one workstation.
 

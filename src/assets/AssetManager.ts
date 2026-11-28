@@ -1,3 +1,4 @@
+import { assetUrl } from './AssetUrl';
 import * as THREE from 'three';
 import { SurfaceTextures, SURFACE_MATERIALS } from './SurfaceTextures';
 import { CharacterAssets } from './CharacterAssets';
@@ -20,7 +21,7 @@ export class AssetManager {
   initModels(renderer: THREE.WebGLRenderer) { this.modelLoader.init(renderer); }
   preloadBuildings() { return this.buildings.preload(); }
   preloadProps() { return this.props.preload(); }
-  async preloadCitizens() { this.characters.register('citizen', await this.modelLoader.load('/assets/characters/citizen.glb')); }
+  async preloadCitizens() { this.characters.register('citizen', await this.modelLoader.load(assetUrl('characters/citizen.glb'))); }
   private geometries = new Map<Shape, Entry<THREE.BufferGeometry>>();
   private materials = new Map<string, Entry<THREE.MeshStandardMaterial>>();
   private surfaces = new SurfaceTextures();

@@ -1,3 +1,4 @@
+import { assetUrl } from './AssetUrl';
 import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
@@ -8,9 +9,9 @@ export interface CharacterLease {
   root: THREE.Group; clips: THREE.AnimationClip[]; dispose(): void;
 }
 const DEFINITIONS = [
-  { id: 'male', url: '/assets/characters/male.glb' },
-  { id: 'female', url: '/assets/characters/female.glb' },
-  { id: 'male-suit', url: '/assets/characters/male-suit.glb' },
+  { id: 'male', url: assetUrl('characters/male.glb') },
+  { id: 'female', url: assetUrl('characters/female.glb') },
+  { id: 'male-suit', url: assetUrl('characters/male-suit.glb') },
 ] as const;
 interface Entry { data: GLTF; refs: number; }
 
@@ -30,7 +31,7 @@ export class CharacterAssets {
         try {
           const response = await fetch(definition.url, { signal: request.signal });
           if (!response.ok) throw new Error(`Character asset ${response.status}`);
-          const data = await this.loader.parseAsync(await response.arrayBuffer(), '/assets/characters/');
+          const data = await this.loader.parseAsync(await response.arrayBuffer(), assetUrl('characters/'));
           if (this.abort.signal.aborted) { disposeGLTF(data); throw new DOMException('Closed', 'AbortError'); }
           this.entries.set(definition.id, { data, refs: 0 }); return;
         } catch (error) { failure = error; }

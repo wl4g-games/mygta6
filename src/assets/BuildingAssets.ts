@@ -1,3 +1,4 @@
+import { assetUrl } from './AssetUrl';
 import * as THREE from 'three';
 import { bakeStaticModel } from './StaticModel';
 import { ModelLoader, disposeModel } from './ModelLoader';
@@ -22,7 +23,7 @@ export class BuildingAssets {
     await Promise.all([...new Set(ids)].filter(id => TYPES.includes(id as typeof TYPES[number])).flatMap(id => [1, 2].map(lod => {
       const key = `${id}-${lod}`; if (this.templates.has(key)) return Promise.resolve();
       const existing = this.pending.get(key); if (existing) return existing;
-      const request = this.loader.load(`/assets/city/${key}.glb`).then(data => {
+      const request = this.loader.load(assetUrl(`city/${key}.glb`)).then(data => {
         if (this.closed) { disposeModel(data.scene); return; }
         const root = bakeStaticModel(data.scene), bounds = new THREE.Box3().setFromObject(root), size = bounds.getSize(new THREE.Vector3());
         const center = bounds.getCenter(new THREE.Vector3());

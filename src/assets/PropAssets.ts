@@ -1,3 +1,4 @@
+import { assetUrl } from './AssetUrl';
 import * as THREE from 'three';
 import { ModelLoader, disposeModel } from './ModelLoader';
 import { bakeStaticModel } from './StaticModel';
@@ -13,7 +14,7 @@ export class PropAssets {
   constructor(private readonly loader: ModelLoader) {}
   async preload() {
     await Promise.all(TYPES.flatMap(id => [1, 2].map(async lod => {
-      const data = await this.loader.load(`/assets/props/${id}-${lod}.glb`);
+      const data = await this.loader.load(assetUrl(`props/${id}-${lod}.glb`));
       if (this.closed) { disposeModel(data.scene); return; }
       const root = bakeStaticModel(data.scene), bounds = new THREE.Box3().setFromObject(root), center = bounds.getCenter(new THREE.Vector3());
       root.traverse(object => { if (object instanceof THREE.Mesh) object.geometry.translate(-center.x, -bounds.min.y, -center.z); });

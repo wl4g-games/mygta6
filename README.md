@@ -24,6 +24,23 @@ HTTPS_PROXY=http://127.0.0.1:8800 pnpm install
 
 部署 `dist/` 到静态服务器即可。Worker 与脚本使用相对构建资源路径，无需后端；正式部署请使用 HTTPS。运行时仅向本站请求已打包资源；地图由 Seed 按需生成，不请求远程地图、字体或第三方素材服务。WebGL2 必需。
 
+### GitHub Pages 自动发布
+
+线上地址：[OpenWorld City](https://wl4g-games.github.io/mygta6/)。
+
+[CI and GitHub Pages](.github/workflows/pages.yml) 在 `dev` 推送和向 `main` 提交 PR 时验证；合入 `main` 后自动发布同一份验证过的 `dist/`。验证包含单元／集成测试、素材校验、生产构建与 Chromium 实际进店，另外检查 Worker、压缩纹理解码、模型、贴图和三段手机视频的子路径加载。只有验证成功才部署。也可从 Actions 页面手动运行 `main` 分支的工作流。仓库 Settings → Pages 的 Source 应为 **GitHub Actions**。
+
+构建时用 Vite `base` 设置部署路径，所有运行时素材也共享这个路径；本地开发继续使用 `/`。模拟本站部署：
+
+```sh
+pnpm build --base=/mygta6/
+pnpm preview --base=/mygta6/ --port 4173
+# 在另一终端运行：
+CITY_PRODUCTION_URL=http://127.0.0.1:4173/mygta6/ pnpm test:production
+```
+
+首次运行浏览器验证前，执行 `pnpm exec playwright install chromium`。存档保存在浏览器本地；本机开发地址的存档不会自动迁移到线上域名。
+
 ## 操作
 
 | 操作 | 按键 |

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.6.1",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
@@ -13,6 +14,7 @@
     "test:stress": "playwright test tests/e2e/streaming.spec.ts",
     "test:soak": "node scripts/streaming-soak.mjs",
     "test:startup": "node scripts/measure-startup.mjs",
+    "test:production": "node scripts/smoke-production.mjs",
     "assets:verify": "python3 scripts/assets.py"
   },
   "dependencies": {

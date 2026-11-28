@@ -1,3 +1,4 @@
+import { assetUrl } from './AssetUrl';
 import * as THREE from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { VehicleDefinition } from '../vehicle/VehicleCatalog';
@@ -33,7 +34,7 @@ export class VehicleAssets {
     const task = [...this.pending.values()].filter(task => !this.running.has(task.id)).sort((a, b) => b.priority - a.priority)[0];
     if (!task) return;
     this.active++; this.running.add(task.id);
-    void this.loader.load(`/assets/vehicles/${task.id}.glb`).then(data => {
+    void this.loader.load(assetUrl(`vehicles/${task.id}.glb`)).then(data => {
       if (this.closed) { disposePrototype(data); throw new DOMException('Closed', 'AbortError'); }
       this.prototypes.set(task.id, { data, refs: 0 }); task.resolve();
     }).catch(task.reject).finally(() => { this.active--; this.pending.delete(task.id); this.running.delete(task.id); this.pump(); });

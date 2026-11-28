@@ -1,3 +1,4 @@
+import { assetUrl } from '../assets/AssetUrl';
 import type { WorldStateStore } from '../world/WorldStateStore';
 import type { EventBus } from '../core/EventBus';
 
@@ -9,9 +10,9 @@ export const CONTACTS = [
 ] as const;
 export type ContactId = typeof CONTACTS[number]['id'];
 export const FEED = [
-  { id: 'harbor', author: '@nia.azure', title: '给忙碌的城市一点海风', place: 'Azure Bay', video: '/assets/media/harbor.webm', likes: 128, color: '#467d91' },
-  { id: 'street', author: '@side.streets', title: '下个路口，去哪里？', place: 'Marina Quarter', video: '/assets/media/street.webm', likes: 86, color: '#bd855d' },
-  { id: 'night', author: '@lowtide.live', title: '今夜的港湾还没睡', place: 'The Low Tide', video: '/assets/media/night.webm', likes: 243, color: '#8e699f' },
+  { id: 'harbor', author: '@nia.azure', title: '给忙碌的城市一点海风', place: 'Azure Bay', video: assetUrl('media/harbor.webm'), likes: 128, color: '#467d91' },
+  { id: 'street', author: '@side.streets', title: '下个路口，去哪里？', place: 'Marina Quarter', video: assetUrl('media/street.webm'), likes: 86, color: '#bd855d' },
+  { id: 'night', author: '@lowtide.live', title: '今夜的港湾还没睡', place: 'The Low Tide', video: assetUrl('media/night.webm'), likes: 243, color: '#8e699f' },
 ] as const;
 export interface PhoneMessage { id: number; text: string; outgoing: boolean; read: boolean; }
 export interface PhoneState {

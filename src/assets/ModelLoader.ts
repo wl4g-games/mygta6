@@ -1,3 +1,4 @@
+import { assetUrl } from './AssetUrl';
 import type { WebGLRenderer, Object3D, Material, Texture, BufferGeometry } from 'three';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -14,7 +15,7 @@ export class ModelLoader {
   private controllers = new Set<AbortController>();
   init(renderer: WebGLRenderer) {
     if (this.transcoder) return;
-    this.transcoder = new KTX2Loader().setTranscoderPath('/assets/basis/').setWorkerLimit(2).detectSupport(renderer); this.loader.setKTX2Loader(this.transcoder);
+    this.transcoder = new KTX2Loader().setTranscoderPath(assetUrl('basis/')).setWorkerLimit(2).detectSupport(renderer); this.loader.setKTX2Loader(this.transcoder);
   }
   get initialized() { return !!this.transcoder; }
   async load(url: string) {

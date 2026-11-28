@@ -1,3 +1,4 @@
+import { assetUrl } from './AssetUrl';
 import * as THREE from 'three';
 export type Surface = 'asphalt' | 'brick' | 'stucco' | 'paving' | 'soil' | 'wood' | 'fabric';
 interface SurfaceEntry { texture: THREE.Texture; refs: number; borrowed?: boolean; }
@@ -21,7 +22,7 @@ export class SurfaceTextures {
   async preload() {
     const loader = new THREE.TextureLoader();
     await Promise.all(([['asphalt', 'clean_asphalt'], ['brick', 'brick_wall_001'], ['paving', 'square_concrete_pavers'], ['wood', 'wood_floor_worn']] as const).map(async ([surface, source]) => {
-      const [color, normal, roughness] = await Promise.all(['diffuse', 'nor_gl', 'rough'].map(kind => loader.loadAsync(`/assets/surfaces/${source}-${kind}.jpg`)));
+      const [color, normal, roughness] = await Promise.all(['diffuse', 'nor_gl', 'rough'].map(kind => loader.loadAsync(assetUrl(`surfaces/${source}-${kind}.jpg`))));
       color.colorSpace = THREE.SRGBColorSpace;
       for (const texture of [color, normal, roughness]) { texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 8; }
       if (this.closed) { for (const texture of [color, normal, roughness]) texture.dispose(); return; }
