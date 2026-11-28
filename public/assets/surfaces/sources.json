@@ -1,0 +1,74 @@
+[
+  {
+    "file": "public/assets/surfaces/clean_asphalt-diffuse.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/clean_asphalt/clean_asphalt_diff_1k.jpg",
+    "sha256": "ddf9224e9cfa3eb2998d9097e4cd34bd3630c85e0e6798e5a0a000415a684083",
+    "bytes": 697630
+  },
+  {
+    "file": "public/assets/surfaces/clean_asphalt-nor_gl.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/clean_asphalt/clean_asphalt_nor_gl_1k.jpg",
+    "sha256": "99cdf6b6f0b8a319d206e1d561bf2a5d9933d8d33e1d685f8e25388101d21310",
+    "bytes": 776360
+  },
+  {
+    "file": "public/assets/surfaces/clean_asphalt-rough.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/clean_asphalt/clean_asphalt_rough_1k.jpg",
+    "sha256": "2280be133c104eb04370b625ebcc7f6709d2173b43ae2cd15a0074c26f492bf9",
+    "bytes": 641634
+  },
+  {
+    "file": "public/assets/surfaces/brick_wall_001-diffuse.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_diffuse_1k.jpg",
+    "sha256": "6a1233ec0186703de830354d89f122991e61e67fb67e0846c7eaf6c5aefea902",
+    "bytes": 574381
+  },
+  {
+    "file": "public/assets/surfaces/brick_wall_001-nor_gl.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_nor_gl_1k.jpg",
+    "sha256": "8afbe3919308b168a6b7235fe7b930f670cfffa1a34de39ee790d55c9d7bda09",
+    "bytes": 295279
+  },
+  {
+    "file": "public/assets/surfaces/brick_wall_001-rough.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_rough_1k.jpg",
+    "sha256": "a23342b02e6c5af106aaece16130aa9153a801cb1a84d5f3e0d06ce248677f38",
+    "bytes": 211093
+  },
+  {
+    "file": "public/assets/surfaces/square_concrete_pavers-diffuse.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/square_concrete_pavers/square_concrete_pavers_diff_1k.jpg",
+    "sha256": "3b28251fd35ede8efccb13f16aa797b1a3e399f7ad9448444b1f02370af1a3f0",
+    "bytes": 787817
+  },
+  {
+    "file": "public/assets/surfaces/square_concrete_pavers-nor_gl.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/square_concrete_pavers/square_concrete_pavers_nor_gl_1k.jpg",
+    "sha256": "b1dc1be9f2b16074c1b63f0c54dafd31237ddbc5a79e0d7654636db75b2973ec",
+    "bytes": 941484
+  },
+  {
+    "file": "public/assets/surfaces/square_concrete_pavers-rough.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/square_concrete_pavers/square_concrete_pavers_rough_1k.jpg",
+    "sha256": "a993c1db60d4f3a3d9343537d4aa614182bce4dd045c4798744509c7a6f105a5",
+    "bytes": 639971
+  },
+  {
+    "file": "public/assets/surfaces/wood_floor_worn-diffuse.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_floor_worn/wood_floor_worn_diff_1k.jpg",
+    "sha256": "db386853009b92b9edd7255b35c9f7b0d4b7de16837a7a9da8422148754bc758",
+    "bytes": 629271
+  },
+  {
+    "file": "public/assets/surfaces/wood_floor_worn-nor_gl.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_floor_worn/wood_floor_worn_nor_gl_1k.jpg",
+    "sha256": "f428496e5d6c726d17d9ecea29c0acd8660348630acf791cea7bdd7f3c6e262b",
+    "bytes": 636603
+  },
+  {
+    "file": "public/assets/surfaces/wood_floor_worn-rough.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_floor_worn/wood_floor_worn_rough_1k.jpg",
+    "sha256": "9d7492db1197f1386466dfd7dd43f692446166c1433ddeebf66c10e8b226a6d0",
+    "bytes": 290570
+  }
+]

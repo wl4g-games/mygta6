@@ -1,0 +1,60 @@
+{
+  "license": "CC0-1.0",
+  "provider": "tevy",
+  "sources": [
+    {
+      "id": "ginkgo-tree",
+      "version": 1,
+      "lod": 1,
+      "url": "https://tevy.dev/models/ginkgo-tree/v1/lod1.glb",
+      "file": "ginkgo-tree-1.glb",
+      "bytes": 783380,
+      "sha256": "cda666280a68a9e03f37853608349bd74a1849e7e17100a4f5a9f4dce466c487"
+    },
+    {
+      "id": "ginkgo-tree",
+      "version": 1,
+      "lod": 2,
+      "url": "https://tevy.dev/models/ginkgo-tree/v1/lod2.glb",
+      "file": "ginkgo-tree-2.glb",
+      "bytes": 253508,
+      "sha256": "fb6e114612190062add7cb7c4fb8fd3ae6826acfc1693a7d5e520e412944a024"
+    },
+    {
+      "id": "park-bench",
+      "version": 1,
+      "lod": 1,
+      "url": "https://tevy.dev/models/park-bench/v1/lod1.glb",
+      "file": "park-bench-1.glb",
+      "bytes": 300552,
+      "sha256": "f2003970d7ff91e969b9c56689c543a1f8a4716fb24464e96753a32fc396fb8f"
+    },
+    {
+      "id": "park-bench",
+      "version": 1,
+      "lod": 2,
+      "url": "https://tevy.dev/models/park-bench/v1/lod2.glb",
+      "file": "park-bench-2.glb",
+      "bytes": 92956,
+      "sha256": "0b949f38ee02166fda12acf6438e8f6dc344a0d8b04aa1df85acc2766c0ef694"
+    },
+    {
+      "id": "street-lamp",
+      "version": 1,
+      "lod": 1,
+      "url": "https://tevy.dev/models/street-lamp/v1/lod1.glb",
+      "file": "street-lamp-1.glb",
+      "bytes": 259468,
+      "sha256": "0fd81d797b6baf92741763380aa14a792bb54eb6ea96303e3994439ffd5494c0"
+    },
+    {
+      "id": "street-lamp",
+      "version": 1,
+      "lod": 2,
+      "url": "https://tevy.dev/models/street-lamp/v1/lod2.glb",
+      "file": "street-lamp-2.glb",
+      "bytes": 79548,
+      "sha256": "5e674ebcdede9ba496faa1eb59103f33d6973d80092664554f1abef5a7108f86"
+    }
+  ]
+}

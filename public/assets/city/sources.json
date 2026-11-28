@@ -1,0 +1,128 @@
+[
+  {
+    "slug": "apartment-block",
+    "name": "Apartment Block",
+    "category": "buildings",
+    "tags": [
+      "building",
+      "apartment",
+      "apartments",
+      "flats",
+      "residential",
+      "housing",
+      "city",
+      "modern",
+      "urban",
+      "downtown",
+      "brick",
+      "render",
+      "balcony",
+      "shops",
+      "mixed use",
+      "emissive"
+    ],
+    "description": "Modern six-storey apartment block, 30 x 14 m and 20 m tall, with three shops on the ground floor. Red brick bays alternate with white rendered bays of stacked balconies with black steel railings; blank lit shop signs, a canopied entrance, rooftop plant and lit windows at night.",
+    "license": "CC0-1.0",
+    "version": 2,
+    "changes": "Far LOD keeps the full facade (colour, depth, lit windows) on a clean low shell; facades weather with grime toward the ground and rain streaks; lit windows read as dark glass by day.",
+    "created": "2026-10-28",
+    "updated": "2026-11-06",
+    "units": "meters",
+    "up": "+Y",
+    "forward": "+Z",
+    "dimensions": {
+      "x": 30.24,
+      "y": 22.32,
+      "z": 17.3
+    },
+    "parts": [],
+    "animations": [],
+    "wind": false,
+    "preview": "/models/apartment-block/v2/preview.webp",
+    "files": [
+      {
+        "lod": 0,
+        "path": "/models/apartment-block/v2/lod0.glb",
+        "bytes": 1231140,
+        "sha256": "cff5187f528375175410f81a3ca0a24c66f7aba1a03dff066c75fdb554f5f2b1",
+        "triangles": 53690
+      },
+      {
+        "lod": 1,
+        "path": "/models/apartment-block/v2/lod1.glb",
+        "bytes": 462080,
+        "sha256": "39f989204a049eb42f8bb4b4e7dae26cea49068d97d0a961028276a57a0478ac",
+        "triangles": 20050
+      },
+      {
+        "lod": 2,
+        "path": "/models/apartment-block/v2/lod2.glb",
+        "bytes": 594396,
+        "sha256": "fd57273f1d8d4016df3467d152002447824ed1f672a3bde4e5ed47ecfbf152bd",
+        "triangles": 836
+      }
+    ]
+  },
+  {
+    "slug": "office-tower",
+    "name": "Office Tower",
+    "category": "buildings",
+    "tags": [
+      "building",
+      "office",
+      "office building",
+      "tower",
+      "high rise",
+      "city",
+      "modern",
+      "urban",
+      "downtown",
+      "business",
+      "precast concrete",
+      "ribbon windows",
+      "podium",
+      "emissive"
+    ],
+    "description": "Modern 15-storey slab office tower, 46 x 24 m at the base and 71 m tall to the mast tip. Pale precast concrete bands with blue-grey ribbon windows wrap the corners of a 40 x 18 m slab over a glazed two-storey podium with a canopied entrance, rooftop plant and lit offices at night.",
+    "license": "CC0-1.0",
+    "version": 2,
+    "changes": "Far LOD keeps the full facade (colour, depth, lit windows) on a clean low shell; facades weather with grime toward the ground and rain streaks; lit windows read as dark glass by day.",
+    "created": "2026-10-28",
+    "updated": "2026-11-06",
+    "units": "meters",
+    "up": "+Y",
+    "forward": "+Z",
+    "dimensions": {
+      "x": 46.6,
+      "y": 70.9,
+      "z": 29.3
+    },
+    "parts": [],
+    "animations": [],
+    "wind": false,
+    "preview": "/models/office-tower/v2/preview.webp",
+    "files": [
+      {
+        "lod": 0,
+        "path": "/models/office-tower/v2/lod0.glb",
+        "bytes": 1087096,
+        "sha256": "d097adfb71480ac1d730a8eb02afe7368643e6453c056004b7aaa29ec723a33e",
+        "triangles": 55936
+      },
+      {
+        "lod": 1,
+        "path": "/models/office-tower/v2/lod1.glb",
+        "bytes": 386004,
+        "sha256": "d6241a4c237dfdf8e442fb17dc2ae716462822fb077bc25bd0ce1013b4146684",
+        "triangles": 18696
+      },
+      {
+        "lod": 2,
+        "path": "/models/office-tower/v2/lod2.glb",
+        "bytes": 426084,
+        "sha256": "8bde44649bd969c0d591b1c1a825dddd99bcfc77f9f690ea9844c03e93e28bd4",
+        "triangles": 1212
+      }
+    ]
+  }
+]

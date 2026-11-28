@@ -1,0 +1,71 @@
+THIRD-PARTY RUNTIME NOTICES — OPENWORLD CITY
+
+Three.js 0.183.x and included examples: MIT.
+https://github.com/mrdoob/three.js
+
+The MIT License
+
+Copyright © 2010-2026 three.js authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+
+Meshoptimizer 1.0 decoder: MIT.
+https://github.com/zeux/meshoptimizer
+
+The MIT License
+
+Copyright (C) 2016-2025, Arseny Kapoulkine
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+
+Rapier3D / rapier.js 0.19.3 — Apache-2.0, Dimforge.
+https://github.com/dimforge/rapier.js
+
+Basis Universal transcoder — Apache-2.0, Binomial LLC.
+https://github.com/BinomialLLC/basis_universal
+
+The complete Apache License 2.0 is included at assets/basis/LICENSE.
+Upstream decoder source headers are preserved in the bundled sources.
+
+ART ASSETS
+Quaternius CC0 Ultimate Modular Men / Women models and animations.
+tevy CC0 models: characters, vehicles, city buildings and street furniture.
+Poly Haven CC0 PBR surfaces.
+Source URLs, versions, licenses and SHA-256 hashes are included in
+assets/characters, assets/vehicles, assets/city, assets/props and assets/surfaces.
+The game's map, brands, character identities, game logic and procedural assets
+are original. Third-party licenses do not license the original game code.
